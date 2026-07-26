@@ -38,6 +38,7 @@ func (r *userSubscriptionRepository) Create(ctx context.Context, sub *service.Us
 		SetDailyUsageUsd(sub.DailyUsageUSD).
 		SetWeeklyUsageUsd(sub.WeeklyUsageUSD).
 		SetMonthlyUsageUsd(sub.MonthlyUsageUSD).
+		SetManualResetCredits(sub.ManualResetCredits).
 		SetNillableAssignedBy(sub.AssignedBy)
 
 	if sub.StartsAt.IsZero() {
@@ -137,6 +138,10 @@ func (r *userSubscriptionRepository) Update(ctx context.Context, sub *service.Us
 		SetDailyUsageUsd(sub.DailyUsageUSD).
 		SetWeeklyUsageUsd(sub.WeeklyUsageUSD).
 		SetMonthlyUsageUsd(sub.MonthlyUsageUSD).
+		SetDailyUsageTokens(sub.DailyUsageTokens).
+		SetWeeklyUsageTokens(sub.WeeklyUsageTokens).
+		SetMonthlyUsageTokens(sub.MonthlyUsageTokens).
+		SetManualResetCredits(sub.ManualResetCredits).
 		SetNillableAssignedBy(sub.AssignedBy).
 		SetAssignedAt(sub.AssignedAt).
 		SetNotes(sub.Notes)
@@ -356,6 +361,62 @@ func (r *userSubscriptionRepository) UpdateNotes(ctx context.Context, subscripti
 	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
 }
 
+func (r *userSubscriptionRepository) AddManualResetCredits(ctx context.Context, subscriptionID int64, delta int) error {
+	if delta == 0 {
+		return nil
+	}
+	client := clientFromContext(ctx, r.client)
+	_, err := client.UserSubscription.UpdateOneID(subscriptionID).
+		AddManualResetCredits(delta).
+		Save(ctx)
+	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
+}
+
+// ConsumeManualResetCreditAndResetDaily decrements one credit and clears daily usage
+// in a single conditional UPDATE. When restartTerm is true (one-time daily card),
+// also reactivates starts_at/expires_at from the reset click. Frontend cannot bypass credits.
+func (r *userSubscriptionRepository) ConsumeManualResetCreditAndResetDaily(
+	ctx context.Context,
+	id, userID int64,
+	newWindowStart time.Time,
+	restartTerm bool,
+	newStartsAt, newExpiresAt time.Time,
+) error {
+	client := clientFromContext(ctx, r.client)
+	update := client.UserSubscription.Update().
+		Where(
+			usersubscription.IDEQ(id),
+			usersubscription.UserIDEQ(userID),
+			usersubscription.ManualResetCreditsGT(0),
+		).
+		AddManualResetCredits(-1).
+		SetDailyUsageUsd(0).
+		SetDailyUsageTokens(0).
+		SetDailyWindowStart(newWindowStart).
+		SetStatus(service.SubscriptionStatusActive)
+
+	if restartTerm {
+		update = update.
+			SetStartsAt(newStartsAt).
+			SetExpiresAt(newExpiresAt).
+			SetWeeklyWindowStart(newWindowStart).
+			SetMonthlyWindowStart(newWindowStart).
+			SetWeeklyUsageUsd(0).
+			SetMonthlyUsageUsd(0).
+			SetWeeklyUsageTokens(0).
+			SetMonthlyUsageTokens(0)
+	}
+
+	n, err := update.Save(ctx)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return service.ErrManualResetNoCredits
+	}
+	return nil
+}
+
 func (r *userSubscriptionRepository) ActivateWindows(ctx context.Context, id int64, start time.Time) error {
 	client := clientFromContext(ctx, r.client)
 	_, err := client.UserSubscription.UpdateOneID(id).
@@ -370,13 +431,13 @@ func (r *userSubscriptionRepository) ResetUsageWindows(ctx context.Context, id i
 	client := clientFromContext(ctx, r.client)
 	update := client.UserSubscription.UpdateOneID(id)
 	if resetDaily {
-		update.SetDailyUsageUsd(0).SetDailyWindowStart(newWindowStart)
+		update.SetDailyUsageUsd(0).SetDailyUsageTokens(0).SetDailyWindowStart(newWindowStart)
 	}
 	if resetWeekly {
-		update.SetWeeklyUsageUsd(0).SetWeeklyWindowStart(newWindowStart)
+		update.SetWeeklyUsageUsd(0).SetWeeklyUsageTokens(0).SetWeeklyWindowStart(newWindowStart)
 	}
 	if resetMonthly {
-		update.SetMonthlyUsageUsd(0).SetMonthlyWindowStart(newWindowStart)
+		update.SetMonthlyUsageUsd(0).SetMonthlyUsageTokens(0).SetMonthlyWindowStart(newWindowStart)
 	}
 	_, err := update.Save(ctx)
 	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
@@ -392,6 +453,7 @@ func (r *userSubscriptionRepository) ResetDailyUsage(ctx context.Context, id int
 	}
 	n, err := query.
 		SetDailyUsageUsd(0).
+		SetDailyUsageTokens(0).
 		SetDailyWindowStart(newWindowStart).
 		Save(ctx)
 	return r.translateConditionalWindowReset(ctx, client, id, n, err)
@@ -407,6 +469,7 @@ func (r *userSubscriptionRepository) ResetWeeklyUsage(ctx context.Context, id in
 	}
 	n, err := query.
 		SetWeeklyUsageUsd(0).
+		SetWeeklyUsageTokens(0).
 		SetWeeklyWindowStart(newWindowStart).
 		Save(ctx)
 	return r.translateConditionalWindowReset(ctx, client, id, n, err)
@@ -422,6 +485,7 @@ func (r *userSubscriptionRepository) ResetMonthlyUsage(ctx context.Context, id i
 	}
 	n, err := query.
 		SetMonthlyUsageUsd(0).
+		SetMonthlyUsageTokens(0).
 		SetMonthlyWindowStart(newWindowStart).
 		Save(ctx)
 	return r.translateConditionalWindowReset(ctx, client, id, n, err)
@@ -447,26 +511,30 @@ func (r *userSubscriptionRepository) translateConditionalWindowReset(ctx context
 	return nil
 }
 
-// IncrementUsage 原子性地累加订阅用量。
+// IncrementUsage 原子性地累加订阅用量（USD + 原始 token）。
 // 限额检查已在请求前由 BillingCacheService.CheckBillingEligibility 完成，
 // 此处仅负责记录实际消费，确保消费数据的完整性。
-func (r *userSubscriptionRepository) IncrementUsage(ctx context.Context, id int64, costUSD float64) error {
+// tokens 使用请求原始 token 数，不受分组倍率影响。
+func (r *userSubscriptionRepository) IncrementUsage(ctx context.Context, id int64, costUSD float64, tokens int64) error {
 	const updateSQL = `
 		UPDATE user_subscriptions us
 		SET
 			daily_usage_usd = us.daily_usage_usd + $1,
 			weekly_usage_usd = us.weekly_usage_usd + $1,
 			monthly_usage_usd = us.monthly_usage_usd + $1,
+			daily_usage_tokens = us.daily_usage_tokens + $2,
+			weekly_usage_tokens = us.weekly_usage_tokens + $2,
+			monthly_usage_tokens = us.monthly_usage_tokens + $2,
 			updated_at = NOW()
 		FROM groups g
-		WHERE us.id = $2
+		WHERE us.id = $3
 			AND us.deleted_at IS NULL
 			AND us.group_id = g.id
 			AND g.deleted_at IS NULL
 	`
 
 	client := clientFromContext(ctx, r.client)
-	result, err := client.ExecContext(ctx, updateSQL, costUSD, id)
+	result, err := client.ExecContext(ctx, updateSQL, costUSD, tokens, id)
 	if err != nil {
 		return err
 	}
@@ -635,6 +703,10 @@ func userSubscriptionEntityToServiceWithStatusMapping(m *dbent.UserSubscription,
 		DailyUsageUSD:      m.DailyUsageUsd,
 		WeeklyUsageUSD:     m.WeeklyUsageUsd,
 		MonthlyUsageUSD:    m.MonthlyUsageUsd,
+		DailyUsageTokens:   m.DailyUsageTokens,
+		WeeklyUsageTokens:  m.WeeklyUsageTokens,
+		MonthlyUsageTokens: m.MonthlyUsageTokens,
+		ManualResetCredits: m.ManualResetCredits,
 		AssignedBy:         m.AssignedBy,
 		AssignedAt:         m.AssignedAt,
 		Notes:              derefString(m.Notes),

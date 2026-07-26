@@ -40,6 +40,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { METHOD_ORDER, isBuiltInAlipayMethod, isBuiltInWxpayMethod } from './providerConfig'
+import { formatPaymentMethodLabel } from '@/views/user/paymentUx'
 import alipayIcon from '@/assets/icons/alipay.svg'
 import wxpayIcon from '@/assets/icons/wxpay.svg'
 import stripeIcon from '@/assets/icons/stripe.svg'
@@ -82,18 +83,18 @@ const sortedMethods = computed(() => {
 })
 
 function methodIcon(type: string): string {
-  if (isBuiltInAlipayMethod(type)) return METHOD_ICONS.alipay
+  if (isBuiltInAlipayMethod(type) || type === 'xorpay') return METHOD_ICONS.alipay
   if (isBuiltInWxpayMethod(type)) return METHOD_ICONS.wxpay
   if (type === 'airwallex') return METHOD_ICONS.airwallex
   return METHOD_ICONS[type] || paymentIcon
 }
 
 function methodLabel(method: PaymentMethodOption): string {
-  return method.display_name || t(`payment.methods.${method.type}`, method.type)
+  return method.display_name || formatPaymentMethodLabel(t, method.type)
 }
 
 function methodSelectedClass(type: string): string {
-  if (isBuiltInAlipayMethod(type)) return 'border-[#02A9F1] bg-blue-50 text-gray-900 shadow-sm dark:bg-blue-950 dark:text-gray-100'
+  if (isBuiltInAlipayMethod(type) || type === 'xorpay') return 'border-[#02A9F1] bg-blue-50 text-gray-900 shadow-sm dark:bg-blue-950 dark:text-gray-100'
   if (isBuiltInWxpayMethod(type)) return 'border-[#09BB07] bg-green-50 text-gray-900 shadow-sm dark:bg-green-950 dark:text-gray-100'
   if (type === 'stripe') return 'border-[#676BE5] bg-indigo-50 text-gray-900 shadow-sm dark:bg-indigo-950 dark:text-gray-100'
   if (type === 'airwallex') return 'border-[#FF6B3D] bg-orange-50 text-gray-900 shadow-sm dark:border-[#FF8E3C] dark:bg-orange-950 dark:text-gray-100'

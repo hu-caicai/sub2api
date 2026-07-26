@@ -258,10 +258,15 @@ func (s *BillingService) initFallbackPricing() {
 	// Claude 4.7 Opus (暂与4.6同价，待官方定价更新)
 	s.fallbackPrices["claude-opus-4.7"] = s.fallbackPrices["claude-opus-4.6"]
 
-	// Claude 4.8 Opus / Claude Opus 5（官方同价：$5 输入 / $25 输出 per MTok）。
-	// 缺少这两条时 getFallbackPricing 会掉到 claude-3-opus（$15/$75），造成 3 倍超收。
+	// Claude 4.8 Opus (暂与4.7同价，待官方定价更新)
 	s.fallbackPrices["claude-opus-4.8"] = s.fallbackPrices["claude-opus-4.7"]
-	s.fallbackPrices["claude-opus-5"] = s.fallbackPrices["claude-opus-4.8"]
+
+	// Claude Sonnet 4.5/4.6 当前与 Sonnet 4 同价
+	s.fallbackPrices["claude-sonnet-4.5"] = s.fallbackPrices["claude-sonnet-4"]
+	s.fallbackPrices["claude-sonnet-4.6"] = s.fallbackPrices["claude-sonnet-4.5"]
+
+	// Claude Haiku 4.5 当前与 Claude 3.5 Haiku 同价
+	s.fallbackPrices["claude-haiku-4.5"] = s.fallbackPrices["claude-3-5-haiku"]
 
 	// Gemini 3.1 Pro
 	s.fallbackPrices["gemini-3.1-pro"] = &ModelPricing{
@@ -593,10 +598,6 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 
 	// 按模型系列匹配
 	if strings.Contains(modelLower, "opus") {
-		// "opus-5" 必须先判：不能用裸 "5" 匹配，否则 claude-opus-4-5 会被误判。
-		if strings.Contains(modelLower, "opus-5") || strings.Contains(modelLower, "opus5") {
-			return s.fallbackPrices["claude-opus-5"]
-		}
 		if strings.Contains(modelLower, "4.8") || strings.Contains(modelLower, "4-8") {
 			return s.fallbackPrices["claude-opus-4.8"]
 		}
@@ -612,13 +613,21 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 		return s.fallbackPrices["claude-3-opus"]
 	}
 	if strings.Contains(modelLower, "sonnet") {
-		if strings.Contains(modelLower, "4") && !strings.Contains(modelLower, "3") {
+		switch {
+		case strings.Contains(modelLower, "4.6") || strings.Contains(modelLower, "4-6"):
+			return s.fallbackPrices["claude-sonnet-4.6"]
+		case strings.Contains(modelLower, "4.5") || strings.Contains(modelLower, "4-5"):
+			return s.fallbackPrices["claude-sonnet-4.5"]
+		case strings.Contains(modelLower, "4") && !strings.Contains(modelLower, "3"):
 			return s.fallbackPrices["claude-sonnet-4"]
 		}
 		return s.fallbackPrices["claude-3-5-sonnet"]
 	}
 	if strings.Contains(modelLower, "haiku") {
-		if strings.Contains(modelLower, "3-5") || strings.Contains(modelLower, "3.5") {
+		switch {
+		case strings.Contains(modelLower, "4.5") || strings.Contains(modelLower, "4-5"):
+			return s.fallbackPrices["claude-haiku-4.5"]
+		case strings.Contains(modelLower, "3-5") || strings.Contains(modelLower, "3.5"):
 			return s.fallbackPrices["claude-3-5-haiku"]
 		}
 		return s.fallbackPrices["claude-3-haiku"]

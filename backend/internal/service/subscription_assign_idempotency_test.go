@@ -154,6 +154,12 @@ func (userSubRepoNoop) UpdateStatus(context.Context, int64, string) error {
 func (userSubRepoNoop) UpdateNotes(context.Context, int64, string) error {
 	panic("unexpected UpdateNotes call")
 }
+func (userSubRepoNoop) AddManualResetCredits(context.Context, int64, int) error {
+	panic("unexpected AddManualResetCredits call")
+}
+func (userSubRepoNoop) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time, bool, time.Time, time.Time) error {
+	panic("unexpected ConsumeManualResetCreditAndResetDaily call")
+}
 func (userSubRepoNoop) ActivateWindows(context.Context, int64, time.Time) error {
 	panic("unexpected ActivateWindows call")
 }
@@ -169,7 +175,7 @@ func (userSubRepoNoop) ResetWeeklyUsage(context.Context, int64, *time.Time, time
 func (userSubRepoNoop) ResetMonthlyUsage(context.Context, int64, *time.Time, time.Time) error {
 	panic("unexpected ResetMonthlyUsage call")
 }
-func (userSubRepoNoop) IncrementUsage(context.Context, int64, float64) error {
+func (userSubRepoNoop) IncrementUsage(context.Context, int64, float64, int64) error {
 	panic("unexpected IncrementUsage call")
 }
 func (userSubRepoNoop) BatchUpdateExpiredStatus(context.Context) (int64, error) {
@@ -267,8 +273,71 @@ func (s *subscriptionUserSubRepoStub) Update(_ context.Context, sub *UserSubscri
 	return nil
 }
 
-func TestAssignSubscriptionReuseWhenSemanticsMatch(t *testing.T) {
-	start := time.Now().Add(-time.Hour)
+func (s *subscriptionUserSubRepoStub) ExtendExpiry(_ context.Context, subscriptionID int64, newExpiresAt time.Time) error {
+	sub := s.byID[subscriptionID]
+	if sub == nil {
+		return ErrSubscriptionNotFound
+	}
+	sub.ExpiresAt = newExpiresAt
+	return nil
+}
+
+func (s *subscriptionUserSubRepoStub) AddManualResetCredits(_ context.Context, subscriptionID int64, delta int) error {
+	sub := s.byID[subscriptionID]
+	if sub == nil {
+		return ErrSubscriptionNotFound
+	}
+	sub.ManualResetCredits += delta
+	return nil
+}
+
+func (s *subscriptionUserSubRepoStub) ConsumeManualResetCreditAndResetDaily(_ context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error {
+	sub := s.byID[id]
+	if sub == nil || sub.UserID != userID {
+		return ErrSubscriptionNotFound
+	}
+	if sub.ManualResetCredits <= 0 {
+		return ErrManualResetNoCredits
+	}
+	sub.ManualResetCredits--
+	sub.DailyUsageUSD = 0
+	sub.DailyUsageTokens = 0
+	sub.DailyWindowStart = &newWindowStart
+	sub.Status = SubscriptionStatusActive
+	if restartTerm {
+		sub.StartsAt = newStartsAt
+		sub.ExpiresAt = newExpiresAt
+		sub.WeeklyWindowStart = &newWindowStart
+		sub.MonthlyWindowStart = &newWindowStart
+		sub.WeeklyUsageUSD = 0
+		sub.MonthlyUsageUSD = 0
+		sub.WeeklyUsageTokens = 0
+		sub.MonthlyUsageTokens = 0
+	}
+	return nil
+}
+
+func (s *subscriptionUserSubRepoStub) UpdateStatus(_ context.Context, subscriptionID int64, status string) error {
+	sub := s.byID[subscriptionID]
+	if sub == nil {
+		return ErrSubscriptionNotFound
+	}
+	sub.Status = status
+	return nil
+}
+
+func (s *subscriptionUserSubRepoStub) UpdateNotes(_ context.Context, subscriptionID int64, notes string) error {
+	sub := s.byID[subscriptionID]
+	if sub == nil {
+		return ErrSubscriptionNotFound
+	}
+	sub.Notes = notes
+	return nil
+}
+
+func TestAssignSubscriptionExtendsActiveInsteadOfIdempotentReuse(t *testing.T) {
+	start := time.Now().Add(-12 * time.Hour)
+	oldExpires := start.AddDate(0, 0, 30)
 	groupRepo := &subscriptionGroupRepoStub{
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
 	}
@@ -278,7 +347,7 @@ func TestAssignSubscriptionReuseWhenSemanticsMatch(t *testing.T) {
 		UserID:    1001,
 		GroupID:   1,
 		StartsAt:  start,
-		ExpiresAt: start.AddDate(0, 0, 30),
+		ExpiresAt: oldExpires,
 		Status:    SubscriptionStatusActive,
 		Notes:     "init",
 	})
@@ -292,170 +361,54 @@ func TestAssignSubscriptionReuseWhenSemanticsMatch(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, int64(10), sub.ID)
-	require.Equal(t, 0, subRepo.createCalls, "reuse should not create new subscription")
-	require.Equal(t, start, sub.StartsAt)
-	require.Equal(t, start.AddDate(0, 0, 30), sub.ExpiresAt)
+	require.Equal(t, 0, subRepo.createCalls, "existing subscription should be extended, not recreated")
+	require.WithinDuration(t, oldExpires.AddDate(0, 0, 30), sub.ExpiresAt, time.Second)
+	require.Equal(t, 1, sub.ManualResetCredits)
 }
 
-func TestAssignSubscriptionDoesNotReactivateFutureSuspendedSubscription(t *testing.T) {
-	start := time.Now().Add(-time.Hour)
+func TestAssignSubscriptionRenewsExpiredDailyCard(t *testing.T) {
 	groupRepo := &subscriptionGroupRepoStub{
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
 	}
 	subRepo := newSubscriptionUserSubRepoStub()
+	oldStart := time.Now().AddDate(0, 0, -3)
+	windowStart := startOfDay(oldStart)
 	subRepo.seed(&UserSubscription{
-		ID:        13,
-		UserID:    1003,
-		GroupID:   1,
-		StartsAt:  start,
-		ExpiresAt: start.AddDate(0, 0, 30),
-		Status:    SubscriptionStatusSuspended,
-		Notes:     "assignment",
-	})
-
-	svc := NewSubscriptionService(groupRepo, subRepo, nil, nil, nil)
-	sub, err := svc.AssignSubscription(context.Background(), &AssignSubscriptionInput{
-		UserID:       1003,
-		GroupID:      1,
-		ValidityDays: 30,
-		Notes:        "assignment",
-	})
-
-	require.NoError(t, err)
-	require.Equal(t, int64(13), sub.ID)
-	require.Equal(t, SubscriptionStatusSuspended, sub.Status)
-	require.Equal(t, start, sub.StartsAt)
-	require.Equal(t, start.AddDate(0, 0, 30), sub.ExpiresAt)
-	require.Equal(t, "assignment", sub.Notes)
-	require.Equal(t, 0, subRepo.createCalls)
-}
-
-func TestAssignSubscriptionDoesNotReactivatePastExpirySuspendedSubscription(t *testing.T) {
-	start := time.Now().AddDate(0, 0, -31)
-	expiresAt := start.AddDate(0, 0, 30)
-	windowStart := startOfDay(start)
-	groupRepo := &subscriptionGroupRepoStub{
-		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
-	}
-	subRepo := newSubscriptionUserSubRepoStub()
-	subRepo.seed(&UserSubscription{
-		ID:                 15,
-		UserID:             1005,
-		GroupID:            1,
-		StartsAt:           start,
-		ExpiresAt:          expiresAt,
-		Status:             SubscriptionStatusSuspended,
-		DailyWindowStart:   &windowStart,
-		WeeklyWindowStart:  &windowStart,
-		MonthlyWindowStart: &windowStart,
-		DailyUsageUSD:      1,
-		WeeklyUsageUSD:     2,
-		MonthlyUsageUSD:    3,
-		Notes:              "suspended assignment",
-	})
-
-	svc := NewSubscriptionService(groupRepo, subRepo, nil, nil, nil)
-	sub, err := svc.AssignSubscription(context.Background(), &AssignSubscriptionInput{
-		UserID:       1005,
-		GroupID:      1,
-		ValidityDays: 30,
-		Notes:        "suspended assignment",
-	})
-
-	require.NoError(t, err)
-	require.Equal(t, int64(15), sub.ID)
-	require.Equal(t, SubscriptionStatusSuspended, sub.Status)
-	require.Equal(t, start, sub.StartsAt)
-	require.Equal(t, expiresAt, sub.ExpiresAt)
-	require.Equal(t, "suspended assignment", sub.Notes)
-	require.Equal(t, &windowStart, sub.DailyWindowStart)
-	require.Equal(t, &windowStart, sub.WeeklyWindowStart)
-	require.Equal(t, &windowStart, sub.MonthlyWindowStart)
-	require.Equal(t, float64(1), sub.DailyUsageUSD)
-	require.Equal(t, float64(2), sub.WeeklyUsageUSD)
-	require.Equal(t, float64(3), sub.MonthlyUsageUSD)
-	require.Equal(t, 0, subRepo.createCalls)
-}
-
-func TestAssignSubscriptionRenewsExpiredSemanticMatch(t *testing.T) {
-	groupRepo := &subscriptionGroupRepoStub{
-		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
-	}
-	subRepo := newSubscriptionUserSubRepoStub()
-	oldStart := time.Now().Add(-time.Hour)
-	oldWindowStart := startOfDay(oldStart)
-	subRepo.seed(&UserSubscription{
-		ID:                 12,
-		UserID:             1002,
-		GroupID:            1,
-		StartsAt:           oldStart,
-		ExpiresAt:          oldStart.AddDate(0, 0, 30),
-		Status:             SubscriptionStatusExpired,
-		DailyWindowStart:   &oldWindowStart,
-		WeeklyWindowStart:  &oldWindowStart,
-		MonthlyWindowStart: &oldWindowStart,
-		DailyUsageUSD:      1,
-		WeeklyUsageUSD:     2,
-		MonthlyUsageUSD:    3,
-		Notes:              " assignment ",
+		ID:               12,
+		UserID:           3001,
+		GroupID:          1,
+		StartsAt:         oldStart,
+		ExpiresAt:        oldStart.AddDate(0, 0, 1),
+		Status:           SubscriptionStatusExpired,
+		DailyWindowStart: &windowStart,
+		DailyUsageUSD:    100,
+		DailyUsageTokens: 999,
+		Notes:            "old",
 	})
 
 	svc := NewSubscriptionService(groupRepo, subRepo, nil, nil, nil)
 	before := time.Now()
 	sub, err := svc.AssignSubscription(context.Background(), &AssignSubscriptionInput{
-		UserID:       1002,
+		UserID:       3001,
 		GroupID:      1,
-		ValidityDays: 30,
-		Notes:        "assignment",
+		ValidityDays: 1,
+		Notes:        "admin-reassign",
 	})
 	after := time.Now()
 
 	require.NoError(t, err)
 	require.Equal(t, int64(12), sub.ID)
-	require.Equal(t, 0, subRepo.createCalls)
 	require.Equal(t, SubscriptionStatusActive, sub.Status)
+	require.Equal(t, 0.0, sub.DailyUsageUSD, "admin reassign of expired daily card must clear usage")
+	require.Equal(t, int64(0), sub.DailyUsageTokens)
 	require.False(t, sub.StartsAt.Before(before))
 	require.False(t, sub.StartsAt.After(after))
-	require.Equal(t, sub.StartsAt.AddDate(0, 0, 30), sub.ExpiresAt)
-	require.Equal(t, startOfDay(sub.StartsAt), *sub.DailyWindowStart)
-	require.Equal(t, startOfDay(sub.StartsAt), *sub.WeeklyWindowStart)
-	require.Equal(t, startOfDay(sub.StartsAt), *sub.MonthlyWindowStart)
-	require.Zero(t, sub.DailyUsageUSD)
-	require.Zero(t, sub.WeeklyUsageUSD)
-	require.Zero(t, sub.MonthlyUsageUSD)
-	require.Equal(t, " assignment ", sub.Notes)
+	require.True(t, sub.HasOneTimeDailyQuota())
+	require.True(t, sub.IsActive())
 }
 
-func TestAssignSubscriptionRenewsExpiredAndAppendsDifferentNotes(t *testing.T) {
-	groupRepo := &subscriptionGroupRepoStub{
-		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
-	}
-	subRepo := newSubscriptionUserSubRepoStub()
-	oldStart := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
-	subRepo.seed(&UserSubscription{
-		ID:        14,
-		UserID:    1004,
-		GroupID:   1,
-		StartsAt:  oldStart,
-		ExpiresAt: oldStart.AddDate(0, 0, 30),
-		Status:    SubscriptionStatusExpired,
-		Notes:     "old assignment",
-	})
-
-	svc := NewSubscriptionService(groupRepo, subRepo, nil, nil, nil)
-	sub, err := svc.AssignSubscription(context.Background(), &AssignSubscriptionInput{
-		UserID:       1004,
-		GroupID:      1,
-		ValidityDays: 30,
-		Notes:        "new assignment",
-	})
-
-	require.NoError(t, err)
-	require.Equal(t, "old assignment\nnew assignment", sub.Notes)
-}
-
-func TestAssignSubscriptionConflictWhenSemanticsMismatch(t *testing.T) {
-	start := time.Now().Add(-time.Hour)
+func TestAssignSubscriptionAppendsNotesOnExistingActive(t *testing.T) {
+	start := time.Now().Add(-12 * time.Hour)
 	groupRepo := &subscriptionGroupRepoStub{
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
 	}
@@ -471,24 +424,25 @@ func TestAssignSubscriptionConflictWhenSemanticsMismatch(t *testing.T) {
 	})
 
 	svc := NewSubscriptionService(groupRepo, subRepo, nil, nil, nil)
-	_, err := svc.AssignSubscription(context.Background(), &AssignSubscriptionInput{
+	sub, err := svc.AssignSubscription(context.Background(), &AssignSubscriptionInput{
 		UserID:       2001,
 		GroupID:      1,
 		ValidityDays: 30,
 		Notes:        "new-note",
 	})
-	require.Error(t, err)
-	require.Equal(t, "SUBSCRIPTION_ASSIGN_CONFLICT", infraerrorsReason(err))
-	require.Equal(t, 0, subRepo.createCalls, "conflict should not create or mutate existing subscription")
+	require.NoError(t, err)
+	require.Equal(t, int64(11), sub.ID)
+	require.Equal(t, "old-note\nnew-note", sub.Notes)
+	require.Equal(t, 0, subRepo.createCalls)
 }
 
-func TestBulkAssignSubscriptionCreatedReusedAndConflict(t *testing.T) {
-	start := time.Now().Add(-time.Hour)
+func TestBulkAssignSubscriptionCreatedAndExtended(t *testing.T) {
+	start := time.Now().Add(-12 * time.Hour)
 	groupRepo := &subscriptionGroupRepoStub{
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
 	}
 	subRepo := newSubscriptionUserSubRepoStub()
-	// user 1: 语义一致，可 reused
+	// user 1: 已有活跃订阅 → extended/reused
 	subRepo.seed(&UserSubscription{
 		ID:        21,
 		UserID:    1,
@@ -498,14 +452,15 @@ func TestBulkAssignSubscriptionCreatedReusedAndConflict(t *testing.T) {
 		Status:    SubscriptionStatusActive,
 		Notes:     "same-note",
 	})
-	// user 3: 语义冲突（有效期不一致），应 failed
+	// user 3: 已过期 → renewed/reused（不再因有效期语义冲突失败）
+	oldStart := time.Now().AddDate(0, 0, -10)
 	subRepo.seed(&UserSubscription{
 		ID:        23,
 		UserID:    3,
 		GroupID:   1,
-		StartsAt:  start,
-		ExpiresAt: start.AddDate(0, 0, 60),
-		Status:    SubscriptionStatusActive,
+		StartsAt:  oldStart,
+		ExpiresAt: oldStart.AddDate(0, 0, 60),
+		Status:    SubscriptionStatusExpired,
 		Notes:     "same-note",
 	})
 
@@ -518,60 +473,19 @@ func TestBulkAssignSubscriptionCreatedReusedAndConflict(t *testing.T) {
 		Notes:        "same-note",
 	})
 	require.NoError(t, err)
-	require.Equal(t, 2, result.SuccessCount)
+	require.Equal(t, 3, result.SuccessCount)
 	require.Equal(t, 1, result.CreatedCount)
-	require.Equal(t, 1, result.ReusedCount)
-	require.Equal(t, 1, result.FailedCount)
+	require.Equal(t, 2, result.ReusedCount)
+	require.Equal(t, 0, result.FailedCount)
 	require.Equal(t, "reused", result.Statuses[1])
 	require.Equal(t, "created", result.Statuses[2])
-	require.Equal(t, "failed", result.Statuses[3])
+	require.Equal(t, "reused", result.Statuses[3])
 	require.Equal(t, 1, subRepo.createCalls)
-}
 
-func TestBulkAssignSubscriptionRenewsExpiredSemanticMatch(t *testing.T) {
-	groupRepo := &subscriptionGroupRepoStub{
-		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
-	}
-	subRepo := newSubscriptionUserSubRepoStub()
-	oldStart := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
-	subRepo.seed(&UserSubscription{
-		ID:              24,
-		UserID:          4,
-		GroupID:         1,
-		StartsAt:        oldStart,
-		ExpiresAt:       oldStart.AddDate(0, 0, 7),
-		Status:          SubscriptionStatusExpired,
-		DailyUsageUSD:   1,
-		WeeklyUsageUSD:  2,
-		MonthlyUsageUSD: 3,
-		Notes:           "bulk",
-	})
-
-	svc := NewSubscriptionService(groupRepo, subRepo, nil, nil, nil)
-	before := time.Now()
-	result, err := svc.BulkAssignSubscription(context.Background(), &BulkAssignSubscriptionInput{
-		UserIDs:      []int64{4},
-		GroupID:      1,
-		ValidityDays: 7,
-		Notes:        "bulk",
-	})
-	after := time.Now()
-
+	renewed, err := subRepo.GetByID(context.Background(), 23)
 	require.NoError(t, err)
-	require.Equal(t, 1, result.SuccessCount)
-	require.Equal(t, 0, result.CreatedCount)
-	require.Equal(t, 1, result.ReusedCount)
-	require.Equal(t, "reused", result.Statuses[4])
-	require.Len(t, result.Subscriptions, 1)
-	renewed := result.Subscriptions[0]
 	require.Equal(t, SubscriptionStatusActive, renewed.Status)
-	require.False(t, renewed.StartsAt.Before(before))
-	require.False(t, renewed.StartsAt.After(after))
-	require.Equal(t, renewed.StartsAt.AddDate(0, 0, 7), renewed.ExpiresAt)
-	require.Zero(t, renewed.DailyUsageUSD)
-	require.Zero(t, renewed.WeeklyUsageUSD)
-	require.Zero(t, renewed.MonthlyUsageUSD)
-	require.Equal(t, "bulk", renewed.Notes)
+	require.True(t, renewed.IsActive())
 }
 
 func TestAssignSubscriptionKeepsWorkingWhenIdempotencyStoreUnavailable(t *testing.T) {
@@ -596,51 +510,6 @@ func TestAssignSubscriptionKeepsWorkingWhenIdempotencyStoreUnavailable(t *testin
 	require.Equal(t, 1, subRepo.createCalls, "semantic idempotent endpoint should not depend on idempotency store availability")
 }
 
-func TestNormalizeAssignValidityDays(t *testing.T) {
-	require.Equal(t, 30, normalizeAssignValidityDays(0))
-	require.Equal(t, 30, normalizeAssignValidityDays(-5))
-	require.Equal(t, MaxValidityDays, normalizeAssignValidityDays(MaxValidityDays+100))
-	require.Equal(t, 7, normalizeAssignValidityDays(7))
-}
-
-func TestDetectAssignSemanticConflictCases(t *testing.T) {
-	start := time.Date(2026, 2, 20, 10, 0, 0, 0, time.UTC)
-	base := &UserSubscription{
-		UserID:    1,
-		GroupID:   1,
-		StartsAt:  start,
-		ExpiresAt: start.AddDate(0, 0, 30),
-		Notes:     "same",
-	}
-
-	reason, conflict := detectAssignSemanticConflict(base, &AssignSubscriptionInput{
-		UserID:       1,
-		GroupID:      1,
-		ValidityDays: 30,
-		Notes:        "same",
-	})
-	require.False(t, conflict)
-	require.Equal(t, "", reason)
-
-	reason, conflict = detectAssignSemanticConflict(base, &AssignSubscriptionInput{
-		UserID:       1,
-		GroupID:      1,
-		ValidityDays: 60,
-		Notes:        "same",
-	})
-	require.True(t, conflict)
-	require.Equal(t, "validity_days_mismatch", reason)
-
-	reason, conflict = detectAssignSemanticConflict(base, &AssignSubscriptionInput{
-		UserID:       1,
-		GroupID:      1,
-		ValidityDays: 30,
-		Notes:        "other",
-	})
-	require.True(t, conflict)
-	require.Equal(t, "notes_mismatch", reason)
-}
-
 func TestAssignSubscriptionGroupTypeValidation(t *testing.T) {
 	groupRepo := &subscriptionGroupRepoStub{
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeStandard},
@@ -659,8 +528,4 @@ func TestAssignSubscriptionGroupTypeValidation(t *testing.T) {
 
 func strconvFormatInt(v int64) string {
 	return strconv.FormatInt(v, 10)
-}
-
-func infraerrorsReason(err error) string {
-	return infraerrors.Reason(err)
 }

@@ -23,11 +23,33 @@
               @update:model-value="onStatusFilterChange"
             />
           </div>
-          <EndpointPopover
-            v-if="publicSettings?.api_base_url || (publicSettings?.custom_endpoints?.length ?? 0) > 0"
-            :api-base-url="publicSettings?.api_base_url || ''"
-            :custom-endpoints="publicSettings?.custom_endpoints || []"
-          />
+          <div class="flex flex-wrap items-center gap-3">
+            <EndpointPopover
+              v-if="publicSettings?.api_base_url || (publicSettings?.custom_endpoints?.length ?? 0) > 0"
+              :api-base-url="publicSettings?.api_base_url || ''"
+              :custom-endpoints="publicSettings?.custom_endpoints || []"
+            />
+            <!-- ponytail: 与 API 节点同行；左连哪、右怎么配 -->
+            <a
+              href="/docs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="ml-auto flex max-w-full items-center gap-3 rounded-lg border border-primary-200/80 bg-primary-50/80 px-3 py-1.5 text-left transition-colors hover:border-primary-300 hover:bg-primary-50 dark:border-primary-800/60 dark:bg-primary-900/20 dark:hover:border-primary-700 dark:hover:bg-primary-900/30"
+              data-tour="keys-docs-guide"
+            >
+              <span class="min-w-0">
+                <span class="block text-xs font-medium text-primary-700 dark:text-primary-300">
+                  {{ t('keys.docsGuide.title') }}
+                </span>
+                <span class="mt-0.5 hidden text-[11px] leading-tight text-primary-600/80 dark:text-primary-400/80 sm:block">
+                  {{ t('keys.docsGuide.subtitle') }}
+                </span>
+              </span>
+              <span class="shrink-0 text-xs font-semibold text-primary-600 dark:text-primary-400">
+                {{ t('keys.docsGuide.cta') }}
+              </span>
+            </a>
+          </div>
         </div>
       </template>
 
@@ -146,12 +168,8 @@
                   :name="row.group.name"
                   :platform="row.group.platform"
                   :subscription-type="row.group.subscription_type"
-                  :rate-multiplier="row.group.rate_multiplier"
-                  :user-rate-multiplier="userGroupRates[row.group.id]"
-                  :peak-rate-enabled="row.group.peak_rate_enabled"
-                  :peak-start="row.group.peak_start"
-                  :peak-end="row.group.peak_end"
-                  :peak-rate-multiplier="row.group.peak_rate_multiplier"
+                  :show-rate="false"
+                  user-facing
                 />
                 <span v-else class="text-sm text-gray-400 dark:text-dark-500">{{
                   t('keys.noGroup')
@@ -480,12 +498,8 @@
                 :name="(option as unknown as GroupOption).label"
                 :platform="(option as unknown as GroupOption).platform"
                 :subscription-type="(option as unknown as GroupOption).subscriptionType"
-                :rate-multiplier="(option as unknown as GroupOption).rate"
-                :user-rate-multiplier="(option as unknown as GroupOption).userRate"
-                :peak-rate-enabled="(option as unknown as GroupOption).peakRateEnabled"
-                :peak-start="(option as unknown as GroupOption).peakStart"
-                :peak-end="(option as unknown as GroupOption).peakEnd"
-                :peak-rate-multiplier="(option as unknown as GroupOption).peakRateMultiplier"
+                :show-rate="false"
+                user-facing
               />
               <span v-else class="text-gray-400">{{ t('keys.selectGroup') }}</span>
             </template>
@@ -494,14 +508,10 @@
                 :name="(option as unknown as GroupOption).label"
                 :platform="(option as unknown as GroupOption).platform"
                 :subscription-type="(option as unknown as GroupOption).subscriptionType"
-                :rate-multiplier="(option as unknown as GroupOption).rate"
-                :user-rate-multiplier="(option as unknown as GroupOption).userRate"
-                :peak-rate-enabled="(option as unknown as GroupOption).peakRateEnabled"
-                :peak-start="(option as unknown as GroupOption).peakStart"
-                :peak-end="(option as unknown as GroupOption).peakEnd"
-                :peak-rate-multiplier="(option as unknown as GroupOption).peakRateMultiplier"
+                :show-rate="false"
                 :description="(option as unknown as GroupOption).description"
                 :selected="selected"
+                user-facing
               />
             </template>
           </Select>
@@ -1093,17 +1103,13 @@
               :name="option.label"
               :platform="option.platform"
               :subscription-type="option.subscriptionType"
-              :rate-multiplier="option.rate"
-              :user-rate-multiplier="option.userRate"
-              :peak-rate-enabled="option.peakRateEnabled"
-              :peak-start="option.peakStart"
-              :peak-end="option.peakEnd"
-              :peak-rate-multiplier="option.peakRateMultiplier"
+              :show-rate="false"
               :description="option.description"
               :selected="
                 selectedKeyForGroup?.group_id === option.value ||
                 (!selectedKeyForGroup?.group_id && option.value === null)
               "
+              user-facing
             />
           </button>
           <!-- Empty state when search has no results -->
@@ -1145,6 +1151,7 @@ import type { Column } from '@/components/common/types'
 import type { BatchApiKeyUsageStats } from '@/api/usage'
 import { formatDateTime } from '@/utils/format'
 import { maskApiKey } from '@/utils/maskApiKey'
+import { platformSearchText, userFacingPlatformText } from '@/utils/platformColors'
 import {
   buildCcSwitchImportDeeplink,
   type CcSwitchClientType
@@ -1161,14 +1168,9 @@ interface GroupOption {
   value: number
   label: string
   description: string | null
-  rate: number
-  userRate: number | null
-  peakRateEnabled: boolean
-  peakStart: string
-  peakEnd: string
-  peakRateMultiplier: number
   subscriptionType: SubscriptionType
   platform: GroupPlatform
+  searchKeywords: string
 }
 
 const appStore = useAppStore()
@@ -1276,8 +1278,6 @@ const submitting = ref(false)
 const now = ref(new Date())
 let resetTimer: ReturnType<typeof setInterval> | null = null
 const usageStats = ref<Record<string, BatchApiKeyUsageStats>>({})
-const userGroupRates = ref<Record<number, number>>({})
-
 const pagination = ref({
   page: 1,
   page_size: getPersistedPageSize(),
@@ -1381,7 +1381,11 @@ const shouldSubmitEditStatus = (key: ApiKey, status: 'active' | 'inactive') => {
 const groupFilterOptions = computed(() => [
   { value: '', label: t('keys.allGroups') },
   { value: 0, label: t('keys.noGroup') },
-  ...groups.value.map((g) => ({ value: g.id, label: g.name }))
+  ...groups.value.map((g) => ({
+    value: g.id,
+    label: userFacingPlatformText(g.name),
+    searchKeywords: platformSearchText(g.platform)
+  }))
 ])
 
 const statusFilterOptions = computed(() => [
@@ -1411,16 +1415,11 @@ const onStatusFilterChange = (value: string | number | boolean | null) => {
 const groupOptions = computed(() =>
   groups.value.map((group) => ({
     value: group.id,
-    label: group.name,
-    description: group.description,
-    rate: group.rate_multiplier,
-    userRate: userGroupRates.value[group.id] ?? null,
-    peakRateEnabled: group.peak_rate_enabled,
-    peakStart: group.peak_start,
-    peakEnd: group.peak_end,
-    peakRateMultiplier: group.peak_rate_multiplier,
+    label: userFacingPlatformText(group.name),
+    description: userFacingPlatformText(group.description),
     subscriptionType: group.subscription_type,
-    platform: group.platform
+    platform: group.platform,
+    searchKeywords: platformSearchText(group.platform)
   }))
 )
 
@@ -1431,7 +1430,8 @@ const filteredGroupOptions = computed(() => {
   if (!query) return groupOptions.value
   return groupOptions.value.filter((opt) => {
     return opt.label.toLowerCase().includes(query) ||
-      (opt.description && opt.description.toLowerCase().includes(query))
+      (opt.description && opt.description.toLowerCase().includes(query)) ||
+      opt.searchKeywords.includes(query)
   })
 })
 
@@ -1512,15 +1512,6 @@ const loadGroups = async () => {
     console.error('Failed to load groups:', error)
   }
 }
-
-const loadUserGroupRates = async () => {
-  try {
-    userGroupRates.value = await userGroupsAPI.getUserGroupRates()
-  } catch (error) {
-    console.error('Failed to load user group rates:', error)
-  }
-}
-
 const loadPublicSettings = async () => {
   try {
     publicSettings.value = await authAPI.getPublicSettings()
@@ -1957,7 +1948,6 @@ onMounted(() => {
   loadSavedColumns()
   loadApiKeys()
   loadGroups()
-  loadUserGroupRates()
   loadPublicSettings()
   document.addEventListener('click', closeGroupSelector)
   resetTimer = setInterval(() => { now.value = new Date() }, 60000)

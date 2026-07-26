@@ -70,7 +70,8 @@ const countdownDisplay = computed(() => {
   return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0')
 })
 
-const isAlipay = computed(() => isBuiltInAlipayMethod(paymentType.value))
+// XorPay returns an Alipay QR, so treat it as Alipay for branding/scan hints.
+const isAlipay = computed(() => isBuiltInAlipayMethod(paymentType.value) || paymentType.value === 'xorpay')
 const isWxpay = computed(() => isBuiltInWxpayMethod(paymentType.value))
 
 const scanTitle = computed(() => {

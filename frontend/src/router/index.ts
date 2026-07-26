@@ -588,6 +588,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/admin/ip-bans',
+    name: 'AdminIpBans',
+    component: () => import('@/views/admin/IpBansView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'IP Ban Management',
+      titleKey: 'admin.ipBans.title',
+      descriptionKey: 'admin.ipBans.description'
+    }
+  },
+  {
     path: '/admin/prompt-audit',
     name: 'AdminPromptAudit',
     component: () => import('@/features/prompt-audit/PromptAuditView.vue'),

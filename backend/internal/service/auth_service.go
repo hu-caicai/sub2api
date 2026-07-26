@@ -79,6 +79,7 @@ type AuthService struct {
 	affiliateService      *AffiliateService
 	defaultSubAssigner    DefaultSubscriptionAssigner
 	userPlatformQuotaRepo UserPlatformQuotaRepository
+	accessBanService      *IPBanService
 }
 
 type DefaultSubscriptionAssigner interface {
@@ -107,6 +108,7 @@ func NewAuthService(
 	defaultSubAssigner DefaultSubscriptionAssigner,
 	affiliateService *AffiliateService,
 	userPlatformQuotaRepo UserPlatformQuotaRepository,
+	accessBanService *IPBanService,
 ) *AuthService {
 	return &AuthService{
 		entClient:             entClient,
@@ -122,6 +124,7 @@ func NewAuthService(
 		affiliateService:      affiliateService,
 		defaultSubAssigner:    defaultSubAssigner,
 		userPlatformQuotaRepo: userPlatformQuotaRepo,
+		accessBanService:      accessBanService,
 	}
 }
 
@@ -189,8 +192,8 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		}
 	}
 
-	// 检查邮箱是否已存在（含 +别名 / Gmail 点号变体归一化，防止单个收件箱批量派生注册）
-	existsEmail, err := s.existsByEmailOrAlias(ctx, email)
+	// 检查邮箱是否已存在
+	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
 		logger.LegacyPrintf("service.auth", "[Auth] Database error checking email exists: %v", err)
 		return "", nil, ErrServiceUnavailable
@@ -224,7 +227,7 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		Status:       StatusActive,
 	}
 
-	if err := s.userRepo.CreateWithEmailAliasGuard(ctx, user); err != nil {
+	if err := s.userRepo.Create(ctx, user); err != nil {
 		// 优先检查邮箱冲突错误（竞态条件下可能发生）
 		if errors.Is(err, ErrEmailExists) {
 			return "", nil, ErrEmailExists
@@ -296,8 +299,8 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, email string, locale .
 		return err
 	}
 
-	// 检查邮箱是否已存在（含 +别名 / Gmail 点号变体归一化，防止单个收件箱批量派生注册）
-	existsEmail, err := s.existsByEmailOrAlias(ctx, email)
+	// 检查邮箱是否已存在
+	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
 		logger.LegacyPrintf("service.auth", "[Auth] Database error checking email exists: %v", err)
 		return ErrServiceUnavailable
@@ -337,8 +340,8 @@ func (s *AuthService) SendVerifyCodeAsync(ctx context.Context, email string, loc
 		return nil, err
 	}
 
-	// 检查邮箱是否已存在（含 +别名 / Gmail 点号变体归一化；在发信前拦截，避免批量脚本消耗发信配额）
-	existsEmail, err := s.existsByEmailOrAlias(ctx, email)
+	// 检查邮箱是否已存在
+	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
 		logger.LegacyPrintf("service.auth", "[Auth] Database error checking email exists: %v", err)
 		return nil, ErrServiceUnavailable
@@ -442,6 +445,9 @@ func (s *AuthService) IsEmailVerifyEnabled(ctx context.Context) bool {
 
 // Login 用户登录，返回JWT token
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, *User, error) {
+	if err := s.validateLoginEmailPolicy(ctx, email); err != nil {
+		return "", nil, err
+	}
 	// 查找用户
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -1102,12 +1108,45 @@ func inferLegacySignupSource(email string) string {
 }
 
 func (s *AuthService) validateRegistrationEmailPolicy(ctx context.Context, email string) error {
+	if err := ValidateRegistrationEmailFormat(email); err != nil {
+		return err
+	}
+	if err := s.validateEmailAccessBan(ctx, email); err != nil {
+		return err
+	}
 	if s.settingService == nil {
 		return nil
 	}
 	whitelist := s.settingService.GetRegistrationEmailSuffixWhitelist(ctx)
 	if !IsRegistrationEmailSuffixAllowed(email, whitelist) {
 		return buildEmailSuffixNotAllowedError(whitelist)
+	}
+	return nil
+}
+
+func (s *AuthService) validateEmailAccessBan(ctx context.Context, email string) error {
+	if s.accessBanService == nil {
+		return nil
+	}
+	_, banned, err := s.accessBanService.CheckEmail(ctx, email)
+	if err != nil {
+		return ErrServiceUnavailable
+	}
+	if banned {
+		return ErrEmailBanned
+	}
+	return nil
+}
+
+func (s *AuthService) validateLoginEmailPolicy(ctx context.Context, email string) error {
+	if err := ValidateRegistrationEmailFormat(email); err != nil {
+		return ErrInvalidCredentials
+	}
+	if err := s.validateEmailAccessBan(ctx, email); err != nil {
+		if errors.Is(err, ErrEmailBanned) {
+			return ErrEmailBanned
+		}
+		return ErrServiceUnavailable
 	}
 	return nil
 }

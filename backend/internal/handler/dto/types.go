@@ -132,8 +132,6 @@ type Group struct {
 
 	// OpenAI Messages 调度开关（用户侧需要此字段判断是否展示 Claude Code 教程）
 	AllowMessagesDispatch bool `json:"allow_messages_dispatch"`
-	// OpenAI Live 接口开关
-	AllowLive bool `json:"allow_live"`
 
 	// 账号过滤控制（仅 OpenAI/Antigravity 平台有效）
 	RequireOAuthOnly  bool `json:"require_oauth_only"`
@@ -145,6 +143,13 @@ type Group struct {
 	MaxReasoningEffort string `json:"max_reasoning_effort"`
 	// ReasoningEffortMappings OpenAI/Codex 推理强度精确映射。
 	ReasoningEffortMappings []domain.ReasoningEffortMapping `json:"reasoning_effort_mappings"`
+
+	// Kiro 模拟缓存配置（仅 Kiro 平台生效）
+	KiroCacheEmulationEnabled   bool    `json:"kiro_cache_emulation_enabled"`
+	KiroAutoStickyEnabled       bool    `json:"kiro_auto_sticky_enabled"`
+	KiroStickySessionTTLSeconds int     `json:"kiro_sticky_session_ttl_seconds"`
+	KiroCacheEmulationRatio     float64 `json:"kiro_cache_emulation_ratio"`
+	KiroEndpointMode            string  `json:"kiro_endpoint_mode"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -213,6 +218,12 @@ type Account struct {
 
 	TempUnschedulableUntil  *time.Time `json:"temp_unschedulable_until"`
 	TempUnschedulableReason string     `json:"temp_unschedulable_reason"`
+	KiroQuotaState          string     `json:"kiro_quota_state,omitempty"`
+	KiroQuotaReason         string     `json:"kiro_quota_reason,omitempty"`
+	KiroQuotaResetAt        *time.Time `json:"kiro_quota_reset_at,omitempty"`
+	KiroRuntimeState        string     `json:"kiro_runtime_state,omitempty"`
+	KiroRuntimeReason       string     `json:"kiro_runtime_reason,omitempty"`
+	KiroRuntimeResetAt      *time.Time `json:"kiro_runtime_reset_at,omitempty"`
 
 	SessionWindowStart  *time.Time `json:"session_window_start"`
 	SessionWindowEnd    *time.Time `json:"session_window_end"`
@@ -523,9 +534,6 @@ type UsageLog struct {
 	UserAgent *string `json:"user_agent"`
 	// IPAddress is visible to the owner of the usage record.
 	IPAddress *string `json:"ip_address,omitempty"`
-	// SessionID is the explicit client-provided request correlation identifier
-	// (e.g. the session_id / X-Session-Id headers). Omitted when absent.
-	SessionID *string `json:"session_id,omitempty"`
 
 	// Cache TTL Override 标记
 	CacheTTLOverridden bool `json:"cache_ttl_overridden"`
@@ -626,6 +634,12 @@ type UserSubscription struct {
 	DailyUsageUSD   float64 `json:"daily_usage_usd"`
 	WeeklyUsageUSD  float64 `json:"weekly_usage_usd"`
 	MonthlyUsageUSD float64 `json:"monthly_usage_usd"`
+
+	DailyUsageTokens   int64 `json:"daily_usage_tokens"`
+	WeeklyUsageTokens  int64 `json:"weekly_usage_tokens"`
+	MonthlyUsageTokens int64 `json:"monthly_usage_tokens"`
+
+	ManualResetCredits int `json:"manual_reset_credits"`
 
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`

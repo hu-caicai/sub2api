@@ -47,7 +47,7 @@
             :rowspan="channel.platforms.length"
             class="px-4 py-3 text-center align-middle font-medium text-gray-900 dark:text-white"
           >
-            {{ channel.name }}
+            {{ displayText(channel.name) }}
           </td>
 
           <!-- 描述：独立一列，同样用 rowspan 纵向合并 -->
@@ -56,7 +56,7 @@
             :rowspan="channel.platforms.length"
             class="px-4 py-3 align-middle text-xs text-gray-500 dark:text-gray-400"
           >
-            <template v-if="channel.description">{{ channel.description }}</template>
+            <template v-if="channel.description">{{ displayText(channel.description) }}</template>
             <span v-else class="text-gray-400">-</span>
           </td>
 
@@ -65,11 +65,11 @@
             <span
               :class="[
                 'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium uppercase',
-                platformBadgeClass(section.platform),
+                platformBadgeClass(displayPlatform(section.platform)),
               ]"
             >
-              <PlatformIcon :platform="section.platform as GroupPlatform" size="xs" />
-              {{ section.platform }}
+              <PlatformIcon :platform="displayPlatform(section.platform) as GroupPlatform" size="xs" />
+              {{ displayPlatformLabel(section.platform) }}
             </span>
           </td>
 
@@ -96,18 +96,9 @@
                     :name="g.name"
                     :platform="g.platform as GroupPlatform"
                     :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
-                    :rate-multiplier="g.rate_multiplier"
-                    :user-rate-multiplier="userGroupRates[g.id] ?? null"
-                    always-show-rate
+                    :show-rate="false"
+                    :user-facing="props.userFacing"
                   />
-                  <span
-                    v-if="hasPeakRate(g)"
-                    class="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
-                    :title="peakRateTitle(g)"
-                  >
-                    <Icon name="clock" size="xs" class="h-3 w-3" />
-                    {{ peakRateLabel(g) }}
-                  </span>
                 </div>
               </div>
               <div
@@ -130,18 +121,9 @@
                     :name="g.name"
                     :platform="g.platform as GroupPlatform"
                     :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
-                    :rate-multiplier="g.rate_multiplier"
-                    :user-rate-multiplier="userGroupRates[g.id] ?? null"
-                    always-show-rate
+                    :show-rate="false"
+                    :user-facing="props.userFacing"
                   />
-                  <span
-                    v-if="hasPeakRate(g)"
-                    class="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
-                    :title="peakRateTitle(g)"
-                  >
-                    <Icon name="clock" size="xs" class="h-3 w-3" />
-                    {{ peakRateLabel(g) }}
-                  </span>
                 </div>
               </div>
               <span v-if="section.groups.length === 0" class="text-xs text-gray-400">-</span>
@@ -158,7 +140,7 @@
                 :pricing-key-prefix="pricingKeyPrefix"
                 :no-pricing-label="noPricingLabel"
                 :show-platform="false"
-                :platform-hint="section.platform"
+                :platform-hint="displayPlatform(section.platform)"
               />
               <span v-if="section.supported_models.length === 0" class="text-xs text-gray-400">
                 {{ noModelsLabel }}
@@ -179,11 +161,14 @@ import GroupBadge from '@/components/common/GroupBadge.vue'
 import SupportedModelChip from './SupportedModelChip.vue'
 import type { UserAvailableChannel, UserAvailableGroup, UserChannelPlatformSection } from '@/api/channels'
 import type { GroupPlatform, SubscriptionType } from '@/types'
-import { platformBadgeClass } from '@/utils/platformColors'
-import { useAppStore } from '@/stores/app'
-import { hasPeakRate as groupHasPeakRate, formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
+import {
+  platformBadgeClass,
+  platformLabel,
+  userFacingPlatform,
+  userFacingPlatformText,
+} from '@/utils/platformColors'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   columns: {
     name: string
     description: string
@@ -197,15 +182,23 @@ const props = defineProps<{
   noPricingLabel: string
   noModelsLabel: string
   emptyLabel: string
-  /** 用户专属倍率（group_id → multiplier）；无专属时由 GroupBadge 仅显示默认倍率。 */
-  userGroupRates: Record<number, number>
-}>()
-
-// Suppress unused warning — props is accessed via template automatically but
-// the explicit reference here keeps the linter from flagging userGroupRates.
-void props.userGroupRates
-
+  userFacing?: boolean
+}>(), {
+  userFacing: false,
+})
 const { t } = useI18n()
+
+function displayPlatform(platform: string): string {
+  return props.userFacing ? userFacingPlatform(platform) : platform
+}
+
+function displayPlatformLabel(platform: string): string {
+  return props.userFacing ? platformLabel(platform) : platform
+}
+
+function displayText(value: string): string {
+  return props.userFacing ? userFacingPlatformText(value) : value
+}
 
 function exclusiveGroups(section: UserChannelPlatformSection): UserAvailableGroup[] {
   return section.groups.filter((g) => g.is_exclusive)
@@ -213,19 +206,5 @@ function exclusiveGroups(section: UserChannelPlatformSection): UserAvailableGrou
 
 function publicGroups(section: UserChannelPlatformSection): UserAvailableGroup[] {
   return section.groups.filter((g) => !g.is_exclusive)
-}
-
-const appStore = useAppStore()
-
-function hasPeakRate(group: UserAvailableGroup): boolean {
-  return groupHasPeakRate(group)
-}
-
-function peakRateLabel(group: UserAvailableGroup): string {
-  return formatPeakRateWindow(group, serverTimezoneLabel(appStore.cachedPublicSettings?.server_utc_offset))
-}
-
-function peakRateTitle(group: UserAvailableGroup): string {
-  return t('common.peakRateTooltip', { window: peakRateLabel(group) }) + t('common.peakRateImageNote')
 }
 </script>

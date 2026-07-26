@@ -1,7 +1,7 @@
 <template>
   <AppLayout>
     <div class="space-y-6">
-      <UsageStatsCards :stats="usageStats" :show-account-cost="false" :strike-standard-cost="true" />
+      <UsageStatsCards :stats="usageStats" :show-account-cost="false" :show-standard-cost="false" />
 
       <div class="space-y-4">
         <div class="card p-4">
@@ -32,6 +32,8 @@
             :show-metric-toggle="true"
             :enable-breakdown="false"
             :show-account-cost="false"
+            :show-standard-cost="false"
+            cost-column-label-key="usage.cost"
             :start-date="startDate"
             :end-date="endDate"
           />
@@ -42,6 +44,8 @@
             :show-metric-toggle="true"
             :enable-breakdown="false"
             :show-account-cost="false"
+            :show-standard-cost="false"
+            cost-column-label-key="usage.cost"
             :start-date="startDate"
             :end-date="endDate"
           />
@@ -58,6 +62,8 @@
             :show-source-toggle="false"
             :show-metric-toggle="true"
             :enable-breakdown="false"
+            :show-standard-cost="false"
+            cost-column-label-key="usage.cost"
             :title="t('usage.endpointDistribution')"
             :start-date="startDate"
             :end-date="endDate"
@@ -178,6 +184,7 @@
           :server-side-sort="true"
           :show-account-billing="false"
           :show-upstream-endpoint="false"
+          :show-cost-detail="false"
           default-sort-key="created_at"
           default-sort-order="desc"
           @sort="handleSort"
@@ -376,7 +383,6 @@ const granularityOptions = computed<SelectOption[]>(() => [
 const requestTypeOptions = computed<SelectOption[]>(() => [
   { value: null, label: t('admin.usage.allTypes') },
   { value: 'ws_v2', label: t('usage.ws') },
-  { value: 'live', label: t('usage.live') },
   { value: 'stream', label: t('usage.stream') },
   { value: 'sync', label: t('usage.sync') },
 ])
@@ -596,7 +602,6 @@ const handleIpGeoBatchFailed = () => {
 const getRequestTypeExportText = (log: UsageLog): string => {
   const requestType = resolveUsageRequestType(log)
   if (requestType === 'cyber') return 'Cyber'
-  if (requestType === 'live') return 'Live'
   if (requestType === 'ws_v2') return 'WS'
   if (requestType === 'stream') return 'Stream'
   if (requestType === 'sync') return 'Sync'
@@ -651,9 +656,7 @@ const exportToCSV = async () => {
       'Output Tokens',
       'Cache Read Tokens',
       'Cache Creation Tokens',
-      'Rate Multiplier',
-      'Billed Cost',
-      'Original Cost',
+      'Cost',
       'First Token (ms)',
       'Duration (ms)',
     ]
@@ -670,9 +673,7 @@ const exportToCSV = async () => {
       log.output_tokens,
       log.cache_read_tokens,
       log.cache_creation_tokens,
-      log.rate_multiplier,
       log.actual_cost.toFixed(8),
-      log.total_cost.toFixed(8),
       log.first_token_ms ?? '',
       log.duration_ms ?? '',
     ].map(escapeCSVValue))

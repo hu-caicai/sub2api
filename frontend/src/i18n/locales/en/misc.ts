@@ -130,12 +130,28 @@ export default {
     daily: 'Daily',
     weekly: 'Weekly',
     monthly: 'Monthly',
+    tokenConsumed: 'Consumed: {tokens} tokens',
     daysRemaining: '{days} days remaining',
     expiresOn: 'Expires on {date}',
     resetIn: 'Resets in {time}',
     quotaEndsIn: 'Quota ends in {time}',
     windowNotActive: 'Awaiting first use',
-    usageOf: '{used} of {limit}'
+    quotaEnded: 'Quota ended',
+    oneTimeDailyHint: 'Valid for 24 hours; daily cards do not auto-reset. After repurchase, click reset to start a new period',
+    usageOf: '{used} of {limit}',
+    manualReset: {
+      remaining: '{count} manual reset(s) remaining',
+      inactive: 'Subscription is not active; cannot reset',
+      expired: 'Subscription has expired; cannot reset',
+      expiredNoCredits: 'Subscription expired with no reset credits; repurchase the same plan to get one',
+      revoked: 'Subscription has been revoked; cannot reset',
+      noCredits: 'No reset credits; repurchase the same plan to earn one',
+      pendingActivate: 'Paid reset pending: click reset to clear daily usage and start a fresh 24 hours from now',
+      button: 'Reset daily quota',
+      confirm: 'Use 1 reset credit? This clears daily usage and starts a new 24-hour period from now.',
+      success: 'Daily quota reset; new 24-hour period started',
+      failed: 'Reset failed'
+    }
   },
 
   // Onboarding Tour
@@ -496,7 +512,9 @@ export default {
       weeks: 'weeks',
       months: 'months',
       searchOrders: 'Search orders...',
+      searchPlans: 'Search plan name, group, currency...',
       allStatuses: 'All Statuses',
+      allSaleStatuses: 'All Sale Statuses',
       allPaymentTypes: 'All Payment Types',
       allOrderTypes: 'All Order Types',
       orderDetail: 'Order Detail',

@@ -167,10 +167,22 @@
 
     <!-- QR Code Mode -->
     <template v-else-if="showQRCode">
-      <div class="card p-6">
-        <div class="flex flex-col items-center space-y-4">
-          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ scanTitle }}</p>
-          <div :class="['relative rounded-lg border-2 p-4', qrBorderClass]">
+      <div class="card overflow-hidden p-0">
+        <div class="relative flex flex-col items-center bg-gradient-to-b from-cyan-50 via-white to-white px-6 pb-6 pt-7 dark:from-cyan-950/30 dark:via-dark-900 dark:to-dark-900">
+          <div class="relative mb-5 flex justify-center">
+            <p class="text-xl font-extrabold tracking-tight text-gray-950 dark:text-white">{{ scanTitle }}</p>
+            <svg class="absolute -right-20 -top-2 hidden h-12 w-24 text-red-500 drop-shadow-sm sm:block" viewBox="0 0 96 48" fill="none" aria-hidden="true">
+              <path d="M92 5C68 10 47 19 26 32" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
+              <path d="M28 18L12 39L39 40" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+
+          <div class="mb-5 rounded-2xl bg-white px-6 py-4 text-center shadow-sm ring-1 ring-gray-100 dark:bg-dark-800 dark:ring-dark-700">
+            <p class="text-5xl font-black leading-none tracking-wide text-blue-600 dark:text-blue-400">{{ paymentAmountDisplay }}</p>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ creditedAmountHint }}</p>
+          </div>
+
+          <div :class="['relative rounded-xl border-2 p-4 shadow-sm', qrBorderClass]">
             <canvas ref="qrCanvas" class="mx-auto"></canvas>
             <!-- Brand logo overlay -->
             <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -179,8 +191,8 @@
               </span>
             </div>
           </div>
-          <p v-if="scanHint" class="text-center text-sm text-gray-500 dark:text-gray-400">{{ scanHint }}</p>
-          <button v-if="payUrl" class="btn btn-secondary text-sm" @click="reopenPopup">
+          <p v-if="scanHint" class="mt-5 text-center text-sm text-gray-500 dark:text-gray-400">{{ scanHint }}</p>
+          <button v-if="payUrl" class="btn btn-secondary mt-4 text-sm" @click="reopenPopup">
             {{ t('payment.qr.openPayWindow') }}
           </button>
         </div>
@@ -190,9 +202,14 @@
         <p class="mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{{ countdownDisplay }}</p>
         <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ t('payment.qr.waitingPayment') }}</p>
       </div>
-      <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
-        {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
-      </button>
+      <div class="grid grid-cols-2 gap-3">
+        <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleBack">
+          {{ t('common.back') }}
+        </button>
+        <button class="btn w-full border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20" :disabled="cancelling" @click="handleCancel">
+          {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
+        </button>
+      </div>
     </template>
 
     <!-- Waiting for Popup/Redirect Mode -->
@@ -210,9 +227,14 @@
         <p class="mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{{ countdownDisplay }}</p>
         <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ t('payment.qr.waitingPayment') }}</p>
       </div>
-      <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
-        {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
-      </button>
+      <div class="grid grid-cols-2 gap-3">
+        <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleBack">
+          {{ t('common.back') }}
+        </button>
+        <button class="btn w-full border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20" :disabled="cancelling" @click="handleCancel">
+          {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
+        </button>
+      </div>
     </template>
   </div>
 </template>
@@ -248,6 +270,7 @@ const props = defineProps<{
   payUrl?: string
   orderType?: string
   currency?: string
+  creditedAmount?: number
   outTradeNo?: string
   mobileAlipayDeepLink?: boolean
 }>()
@@ -279,6 +302,17 @@ const localeCode = computed(() => {
   return undefined
 })
 
+const paymentAmountDisplay = computed(() => {
+  if (!props.payAmount || props.payAmount <= 0) return formatPaymentAmount(0, paymentCurrency.value, localeCode.value)
+  return formatPaymentAmount(props.payAmount, paymentCurrency.value, localeCode.value)
+})
+
+const creditedAmountHint = computed(() => {
+  if (props.orderType === 'subscription') return t('payment.orders.payAmount')
+  if (!props.creditedAmount || props.creditedAmount <= 0) return t('payment.qr.waitingPayment')
+  return `${t('payment.creditedBalance')} ${creditedAmountSymbol}${props.creditedAmount.toFixed(2)}`
+})
+
 // Terminal outcome: null = still active, 'success' | 'cancelled' | 'expired'
 const outcome = ref<PaymentOutcome | null>(null)
 
@@ -291,7 +325,8 @@ let alipayLauncher: AlipayDeepLinkLauncher | null = null
 const VERIFY_RETRY_INTERVAL_MS = 15000
 const VERIFY_RETRY_MAX_ATTEMPTS = 6
 
-const isAlipay = computed(() => isBuiltInAlipayMethod(props.paymentType))
+// XorPay returns an Alipay QR, so treat it as Alipay for branding/scan hints.
+const isAlipay = computed(() => isBuiltInAlipayMethod(props.paymentType) || props.paymentType === 'xorpay')
 const isWxpay = computed(() => isBuiltInWxpayMethod(props.paymentType))
 const isMobileAlipayDeepLink = computed(() => props.mobileAlipayDeepLink === true && isAlipay.value && !!qrUrl.value)
 const showQRCode = computed(() => !!qrUrl.value && (!isMobileAlipayDeepLink.value || deepLinkFallbackVisible.value))
@@ -465,6 +500,8 @@ async function handleCancel() {
     cancelling.value = false
   }
 }
+
+function handleBack() { cleanup(); emit('done') }
 
 function handleDone() { cleanup(); emit('done') }
 

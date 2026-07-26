@@ -27,13 +27,19 @@ type UserSubscriptionRepository interface {
 	ExtendExpiry(ctx context.Context, subscriptionID int64, newExpiresAt time.Time) error
 	UpdateStatus(ctx context.Context, subscriptionID int64, status string) error
 	UpdateNotes(ctx context.Context, subscriptionID int64, notes string) error
+	AddManualResetCredits(ctx context.Context, subscriptionID int64, delta int) error
+	// ConsumeManualResetCreditAndResetDaily atomically decrements one credit and
+	// clears daily usage. When restartTerm is true, also reactivates the subscription
+	// with starts_at/expires_at for a fresh one-time daily window from now.
+	// Returns ErrManualResetNoCredits when no row matched.
+	ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error
 
 	ActivateWindows(ctx context.Context, id int64, start time.Time) error
 	ResetUsageWindows(ctx context.Context, id int64, resetDaily, resetWeekly, resetMonthly bool, newWindowStart time.Time) error
 	ResetDailyUsage(ctx context.Context, id int64, expectedWindowStart *time.Time, newWindowStart time.Time) error
 	ResetWeeklyUsage(ctx context.Context, id int64, expectedWindowStart *time.Time, newWindowStart time.Time) error
 	ResetMonthlyUsage(ctx context.Context, id int64, expectedWindowStart *time.Time, newWindowStart time.Time) error
-	IncrementUsage(ctx context.Context, id int64, costUSD float64) error
+	IncrementUsage(ctx context.Context, id int64, costUSD float64, tokens int64) error
 
 	BatchUpdateExpiredStatus(ctx context.Context) (int64, error)
 }

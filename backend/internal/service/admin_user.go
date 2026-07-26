@@ -381,6 +381,25 @@ func (s *adminServiceImpl) DeleteUser(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (s *adminServiceImpl) BatchDeleteUsers(ctx context.Context, ids []int64) (*UserBatchDeleteResult, error) {
+	result := &UserBatchDeleteResult{}
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	for _, id := range ids {
+		if err := s.DeleteUser(ctx, id); err != nil {
+			result.Skipped = append(result.Skipped, UserBatchDeleteSkipped{
+				ID:     id,
+				Reason: err.Error(),
+			})
+			continue
+		}
+		result.DeletedIDs = append(result.DeletedIDs, id)
+	}
+	return result, nil
+}
+
 func (s *adminServiceImpl) listUserAPIKeysForDeletion(ctx context.Context, userID int64) ([]APIKey, error) {
 	if s.apiKeyRepo == nil {
 		return nil, nil

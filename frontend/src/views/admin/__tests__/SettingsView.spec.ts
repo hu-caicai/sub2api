@@ -50,7 +50,6 @@ const {
   getOllamaCloudUsageSettings: vi.fn().mockResolvedValue({
     enabled: false,
     interval_minutes: 60,
-    debounce_minutes: 1,
   }),
   updateOllamaCloudUsageSettings: vi.fn().mockImplementation(async (payload) => payload),
   getGroups: vi.fn(),
@@ -237,6 +236,7 @@ vi.mock("vue-i18n", async () => {
 });
 
 const AppLayoutStub = { template: "<div><slot /></div>" };
+const RouterLinkStub = { template: "<a><slot /></a>" };
 const ToggleStub = defineComponent({
   props: {
     modelValue: {
@@ -504,6 +504,7 @@ const baseSettingsResponse = {
     openai:      { daily: null, weekly: 12.5, monthly: null },
     gemini:      { daily: null, weekly: null, monthly: 200 },
     antigravity: { daily: null, weekly: null, monthly: null },
+    kiro:        { daily: null, weekly: null, monthly: null },
   },
 };
 
@@ -512,6 +513,8 @@ function mountView() {
     global: {
       stubs: {
         AppLayout: AppLayoutStub,
+        RouterLink: RouterLinkStub,
+        "router-link": RouterLinkStub,
         Select: SelectStub,
         Toggle: ToggleStub,
         Icon: true,
@@ -648,7 +651,6 @@ describe("admin SettingsView payment visible method controls", () => {
     getOllamaCloudUsageSettings.mockResolvedValue({
       enabled: false,
       interval_minutes: 60,
-      debounce_minutes: 1,
     });
     updateOllamaCloudUsageSettings.mockImplementation(async (payload) => payload);
     getGroups.mockResolvedValue([]);
@@ -926,6 +928,8 @@ describe("admin SettingsView payment visible method controls", () => {
       global: {
         stubs: {
           AppLayout: AppLayoutStub,
+          RouterLink: RouterLinkStub,
+          "router-link": RouterLinkStub,
           Select: SelectStub,
           Toggle: ToggleStub,
           Icon: true,
@@ -1009,7 +1013,6 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(card.find('[data-testid="ollama-cloud-usage-global-interval"]').exists()).toBe(false);
 
     await card.get('[data-testid="ollama-cloud-usage-global-enabled"]').setValue(true);
-    await card.get('[data-testid="ollama-cloud-usage-global-debounce"]').setValue(3);
     await card.get('[data-testid="ollama-cloud-usage-global-interval"]').setValue(90);
     await card.get('[data-testid="ollama-cloud-usage-global-save"]').trigger("click");
     await flushPromises();
@@ -1017,7 +1020,6 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(updateOllamaCloudUsageSettings).toHaveBeenCalledWith({
       enabled: true,
       interval_minutes: 90,
-      debounce_minutes: 3,
     });
   });
 
@@ -1138,6 +1140,8 @@ describe("admin SettingsView payment visible method controls", () => {
       global: {
         stubs: {
           AppLayout: AppLayoutStub,
+          RouterLink: RouterLinkStub,
+          "router-link": RouterLinkStub,
           Select: SelectStub,
           Toggle: ToggleStub,
           Icon: true,
@@ -1454,7 +1458,7 @@ describe("admin SettingsView platform quota matrix", () => {
     getProviders.mockResolvedValue({ data: [] });
   });
 
-  it("从 baseSettings 加载默认平台配额数据并在 Users tab 渲染 5 平台行", async () => {
+  it("从 baseSettings 加载默认平台配额数据并在 Users tab 渲染 6 平台行", async () => {
     const wrapper = mountView();
     await flushPromises();
     await openUsersTab(wrapper);
@@ -1467,9 +1471,10 @@ describe("admin SettingsView platform quota matrix", () => {
     expect(html).toContain("openai");
     expect(html).toContain("gemini");
     expect(html).toContain("antigravity");
+    expect(html).toContain("kiro");
   });
 
-  it("保存时 updateSettings payload 应包含嵌套 default_platform_quotas 对象（含全 5 平台）", async () => {
+  it("保存时 updateSettings payload 应包含嵌套 default_platform_quotas 对象（含全 6 平台）", async () => {
     const wrapper = mountView();
     await flushPromises();
     await openUsersTab(wrapper);
@@ -1485,7 +1490,7 @@ describe("admin SettingsView platform quota matrix", () => {
     // 应携带嵌套对象，而非扁平字段
     expect(payload).toHaveProperty("default_platform_quotas");
     const quotas = payload["default_platform_quotas"] as Record<string, unknown>;
-    const platforms = ["anthropic", "openai", "gemini", "antigravity", "grok"];
+    const platforms = ["anthropic", "openai", "gemini", "antigravity", "grok", "kiro"];
     for (const p of platforms) {
       expect(quotas).toHaveProperty(p);
       const pq = quotas[p] as Record<string, unknown>;
@@ -1499,7 +1504,7 @@ describe("admin SettingsView platform quota matrix", () => {
     expect(payload).not.toHaveProperty("default_platform_quota_openai_weekly");
   });
 
-  it("加载后 form.default_platform_quotas 含全 5 平台，从嵌套 JSON 正确读取数值", async () => {
+  it("加载后 form.default_platform_quotas 含全 6 平台，从嵌套 JSON 正确读取数值", async () => {
     getSettings.mockResolvedValueOnce({
       ...baseSettingsResponse,
       default_platform_quotas: {
@@ -1524,6 +1529,7 @@ describe("admin SettingsView platform quota matrix", () => {
     // 缺失平台应补全为 null
     expect(quotas["gemini"]).toEqual({ daily: null, weekly: null, monthly: null });
     expect(quotas["antigravity"]).toEqual({ daily: null, weekly: null, monthly: null });
+    expect(quotas["kiro"]).toEqual({ daily: null, weekly: null, monthly: null });
   });
 
   it("空输入（v-model.number 产出 \"\"）在提交时清洗为 null 而非空字符串", async () => {
@@ -1535,6 +1541,7 @@ describe("admin SettingsView platform quota matrix", () => {
         openai:    { daily: null, weekly: null, monthly: null },
         gemini:    { daily: null, weekly: null, monthly: null },
         antigravity: { daily: null, weekly: null, monthly: null },
+        kiro: { daily: null, weekly: null, monthly: null },
       },
     });
 

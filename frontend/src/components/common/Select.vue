@@ -12,6 +12,7 @@
       :aria-describedby="ariaDescribedby"
       :class="[
         'select-trigger',
+        size === 'sm' && 'select-trigger-sm',
         isOpen && 'select-trigger-open',
         error && 'select-trigger-error',
         disabled && 'select-trigger-disabled'
@@ -39,7 +40,7 @@
       <span class="select-icon">
         <Icon
           name="chevronDown"
-          size="md"
+          :size="size === 'sm' ? 'sm' : 'md'"
           :class="['transition-transform duration-200', isOpen && 'rotate-180']"
         />
       </span>
@@ -52,7 +53,7 @@
           v-if="isOpen"
           ref="dropdownRef"
           class="select-dropdown-portal"
-          :class="[instanceId]"
+          :class="[instanceId, size === 'sm' && 'select-dropdown-sm']"
           :style="dropdownStyle"
           role="listbox"
           @click.stop
@@ -150,6 +151,7 @@ interface Props {
   labelKey?: string
   creatable?: boolean
   creatablePrefix?: string
+  size?: 'sm' | 'md'
   clearable?: boolean
   id?: string
   ariaLabel?: string
@@ -169,7 +171,8 @@ const props = withDefaults(defineProps<Props>(), {
   creatablePrefix: '',
   clearable: false,
   valueKey: 'value',
-  labelKey: 'label'
+  labelKey: 'label',
+  size: 'md'
 })
 
 const emit = defineEmits<Emits>()
@@ -272,6 +275,7 @@ const filteredOptions = computed(() => {
       if (getOptionLabel(opt).toLowerCase().includes(query)) return true
       // Also match description if present
       if (opt.description && String(opt.description).toLowerCase().includes(query)) return true
+      if (opt.searchKeywords && String(opt.searchKeywords).toLowerCase().includes(query)) return true
       return false
     })
     // In creatable mode, always prepend a fuzzy search option
@@ -343,6 +347,15 @@ const toggle = () => {
   isOpen.value = !isOpen.value
 }
 
+const handleEscapeWhileOpen = (event: KeyboardEvent) => {
+  if (event.key !== 'Escape' || !isOpen.value) return
+  // Capture phase: close this dropdown before BaseDialog handles Escape.
+  event.preventDefault()
+  event.stopPropagation()
+  isOpen.value = false
+  triggerRef.value?.focus()
+}
+
 watch(isOpen, (open) => {
   if (open) {
     calculateDropdownPosition()
@@ -363,11 +376,13 @@ watch(isOpen, (open) => {
     // Add scroll listener to update position
     window.addEventListener('scroll', updateTriggerRect, { capture: true, passive: true })
     window.addEventListener('resize', calculateDropdownPosition)
+    document.addEventListener('keydown', handleEscapeWhileOpen, true)
   } else {
     searchQuery.value = ''
     focusedIndex.value = -1
     window.removeEventListener('scroll', updateTriggerRect, { capture: true })
     window.removeEventListener('resize', calculateDropdownPosition)
+    document.removeEventListener('keydown', handleEscapeWhileOpen, true)
   }
 })
 
@@ -412,9 +427,7 @@ const onDropdownKeyDown = (e: KeyboardEvent) => {
       }
       break
     case 'Escape':
-      e.preventDefault()
-      isOpen.value = false
-      triggerRef.value?.focus()
+      handleEscapeWhileOpen(e)
       break
     case 'Tab':
       isOpen.value = false
@@ -454,6 +467,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleEscapeWhileOpen, true)
   window.removeEventListener('scroll', updateTriggerRect, { capture: true })
   window.removeEventListener('resize', calculateDropdownPosition)
 })
@@ -474,6 +488,11 @@ onUnmounted(() => {
 
 .select-trigger-open {
   @apply border-primary-500 ring-2 ring-primary-500/30;
+}
+
+/* 紧凑尺寸：对齐原 input py-1 text-xs 的高度，用于内联紧凑下拉 */
+.select-trigger-sm {
+  @apply px-2.5 py-1 text-xs rounded-lg;
 }
 
 .select-trigger-error {
@@ -566,6 +585,35 @@ onUnmounted(() => {
 .select-dropdown-portal .select-empty {
   @apply px-4 py-8 text-center text-sm;
   @apply text-gray-500 dark:text-dark-400;
+}
+
+/* 紧凑尺寸下拉面板：选项行/搜索框收紧，宽度跟随触发器 */
+.select-dropdown-portal.select-dropdown-sm {
+  @apply min-w-0 rounded-lg;
+}
+
+.select-dropdown-portal.select-dropdown-sm .select-search {
+  @apply px-2 py-1.5;
+}
+
+.select-dropdown-portal.select-dropdown-sm .select-search-input {
+  @apply text-xs;
+}
+
+.select-dropdown-portal.select-dropdown-sm .select-options {
+  @apply py-0.5;
+}
+
+.select-dropdown-portal.select-dropdown-sm .select-option {
+  @apply px-2.5 py-1.5 text-xs;
+}
+
+.select-dropdown-portal.select-dropdown-sm .select-option-group {
+  @apply px-2.5 py-1 text-[10px];
+}
+
+.select-dropdown-portal.select-dropdown-sm .select-empty {
+  @apply px-2.5 py-4 text-xs;
 }
 
 .select-dropdown-enter-active,

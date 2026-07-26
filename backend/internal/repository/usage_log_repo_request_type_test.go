@@ -96,7 +96,7 @@ func TestUsageLogRepositoryCreateSyncRequestTypeAndLegacyFields(t *testing.T) {
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
 			sqlmock.AnyArg(), // account_stats_cost
-			sqlmock.AnyArg(), // session_id
+			sqlmock.AnyArg(), // kiro_credits
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(int64(99), createdAt))
@@ -186,7 +186,7 @@ func TestUsageLogRepositoryCreate_PersistsServiceTier(t *testing.T) {
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
 			sqlmock.AnyArg(), // account_stats_cost
-			sqlmock.AnyArg(), // session_id
+			sqlmock.AnyArg(), // kiro_credits
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(int64(100), createdAt))
@@ -229,7 +229,7 @@ func TestExecUsageLogInsertNoResult_PersistsRequestedModel(t *testing.T) {
 		CreatedAt:      time.Date(2025, 1, 4, 12, 0, 0, 0, time.UTC),
 	})
 
-	mock.ExpectExec("INSERT INTO usage_logs").
+	mock.ExpectExec(fmt.Sprintf(`(?s)INSERT INTO usage_logs.*\$%d, \$%d\s*\)`, len(prepared.args)-1, len(prepared.args))).
 		WithArgs(anySliceToDriverValues(prepared.args)...).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -250,6 +250,30 @@ func TestPrepareUsageLogInsert_ArgCountMatchesTypes(t *testing.T) {
 	})
 
 	require.Len(t, prepared.args, len(usageLogInsertArgTypes))
+}
+
+func TestUsageLogRepositoryCreate_StaticPlaceholdersMatchPreparedArgs(t *testing.T) {
+	db, mock := newSQLMock(t)
+	repo := &usageLogRepository{sql: db}
+	createdAt := time.Date(2025, 1, 5, 13, 0, 0, 0, time.UTC)
+	log := &service.UsageLog{
+		UserID:    1,
+		APIKeyID:  2,
+		AccountID: 3,
+		RequestID: "req-static-placeholder-count",
+		Model:     "gpt-5",
+		CreatedAt: createdAt,
+	}
+	prepared := prepareUsageLogInsert(log)
+
+	mock.ExpectQuery(fmt.Sprintf(`(?s)INSERT INTO usage_logs.*\$%d, \$%d\s*\)`, len(prepared.args)-1, len(prepared.args))).
+		WithArgs(anySliceToDriverValues(prepared.args)...).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(int64(101), createdAt))
+
+	inserted, err := repo.Create(context.Background(), log)
+	require.NoError(t, err)
+	require.True(t, inserted)
+	require.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestPrepareUsageLogInsert_PersistsImageSizeMetadata(t *testing.T) {
@@ -828,7 +852,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},
 			sql.NullString{},
 			sql.NullFloat64{},
-			sql.NullString{},
+			sql.NullFloat64{},
 			now,
 		}})
 		require.NoError(t, err)
@@ -903,7 +927,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},  // billing_tier
 			sql.NullString{},  // billing_mode
 			sql.NullFloat64{}, // account_stats_cost
-			sql.NullString{},  // session_id
+			sql.NullFloat64{}, // kiro_credits
 			now,
 		}})
 		require.NoError(t, err)
@@ -961,7 +985,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},  // billing_tier
 			sql.NullString{},  // billing_mode
 			sql.NullFloat64{}, // account_stats_cost
-			sql.NullString{},  // session_id
+			sql.NullFloat64{}, // kiro_credits
 			now,
 		}})
 		require.NoError(t, err)
@@ -1019,7 +1043,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},  // billing_tier
 			sql.NullString{},  // billing_mode
 			sql.NullFloat64{}, // account_stats_cost
-			sql.NullString{},  // session_id
+			sql.NullFloat64{}, // kiro_credits
 			now,
 		}})
 		require.NoError(t, err)

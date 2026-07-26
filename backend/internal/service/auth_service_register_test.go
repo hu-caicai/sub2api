@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/accessban"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -250,6 +251,7 @@ func newAuthService(repo *userRepoStub, settings map[string]string, emailCache E
 		nil, // defaultSubAssigner
 		nil, // affiliateService
 		quotaRepo,
+		nil,
 	)
 }
 
@@ -365,30 +367,6 @@ func TestAuthService_Register_EmailExists(t *testing.T) {
 	require.ErrorIs(t, err, ErrEmailExists)
 }
 
-func TestAuthService_Register_AliasDuplicateRejected(t *testing.T) {
-	repo := &userRepoStub{aliasExists: true}
-	service := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
-	}, nil, nil)
-
-	_, _, err := service.Register(context.Background(), "some.one+bulk294@gmail.com", "password")
-	require.ErrorIs(t, err, ErrEmailExists)
-	require.Empty(t, repo.created)
-}
-
-func TestAuthService_Register_UsesAliasGuardedCreate(t *testing.T) {
-	// 注册必须走带别名兜底的创建路径：服务层前置查重与写入之间存在竞态窗口。
-	repo := &userRepoStub{nextID: 91}
-	service := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
-	}, nil, nil)
-
-	_, user, err := service.Register(context.Background(), "newuser@gmail.com", "password")
-	require.NoError(t, err)
-	require.NotNil(t, user)
-	require.Equal(t, 1, repo.guardedCreates)
-}
-
 func TestAuthService_Register_CheckEmailError(t *testing.T) {
 	repo := &userRepoStub{existsErr: errors.New("db down")}
 	service := newAuthService(repo, map[string]string{
@@ -424,6 +402,37 @@ func TestAuthService_Register_EmailSuffixNotAllowed(t *testing.T) {
 	require.Equal(t, "EMAIL_SUFFIX_NOT_ALLOWED", appErr.Reason)
 	require.Equal(t, "2", appErr.Metadata["allowed_suffix_count"])
 	require.Equal(t, "@example.com,@company.com", appErr.Metadata["allowed_suffixes"])
+}
+
+func TestAuthService_Register_EmailRegexBanned(t *testing.T) {
+	repo := &userRepoStub{}
+	banSvc := NewIPBanService(&memoryIPBanRepo{
+		rules: []IPBan{{
+			ID:       1,
+			RuleType: accessban.RuleTypeEmailRegex,
+			Pattern:  `@365\.liout\.com$`,
+			Status:   IPBanStatusActive,
+		}},
+	})
+	service := NewAuthService(
+		nil,
+		repo,
+		nil,
+		nil,
+		&config.Config{JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1}},
+		NewSettingService(&settingRepoStub{values: map[string]string{
+			SettingKeyRegistrationEnabled: "true",
+		}}, &config.Config{}),
+		nil, nil, nil, nil, nil, nil, nil,
+		banSvc,
+	)
+
+	_, _, err := service.Register(context.Background(), "hyi2eo8mze@365.liout.com", "password")
+	require.ErrorIs(t, err, ErrEmailBanned)
+
+	_, user, err := service.Register(context.Background(), "user@gmail.com", "password")
+	require.NoError(t, err)
+	require.NotNil(t, user)
 }
 
 func TestAuthService_Register_EmailSuffixAllowed(t *testing.T) {
@@ -781,7 +790,7 @@ func newAuthServiceWithDingTalkCfg(settings map[string]string, dtCfg config.Ding
 		DingTalk: dtCfg,
 	}
 	settingService := NewSettingService(&settingRepoStub{values: settings}, cfg)
-	return NewAuthService(nil, nil, nil, nil, cfg, settingService, nil, nil, nil, nil, nil, nil, nil)
+	return NewAuthService(nil, nil, nil, nil, cfg, settingService, nil, nil, nil, nil, nil, nil, nil, nil)
 }
 
 // minDingTalkURLs 返回一个包含必填字段的基础 DingTalkConnectConfig（不设 Enabled/BypassRegistration/Policy）。

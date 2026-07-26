@@ -136,18 +136,10 @@
 
           <template #cell-platform="{ value }">
             <span
-              :class="[
-                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
-                value === 'anthropic'
-                  ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                  : value === 'openai'
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                    : value === 'antigravity'
-                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                      : value === 'grok'
-                        ? 'bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-              ]"
+                :class="[
+                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                  platformBadgeLightClass(value),
+                ]"
             >
               <PlatformIcon :platform="value" size="xs" />
               {{ t("admin.groups.platforms." + value) }}
@@ -551,36 +543,24 @@
             </span>
           </div>
           <!-- 分组选择下拉 -->
-          <select
-            class="input"
+          <Select
+            :model-value="null"
+            :options="copyAccountsCreateSelectOptions"
+            :placeholder="t('admin.groups.copyAccounts.selectPlaceholder')"
             @change="
-              (e) => {
-                const val = Number((e.target as HTMLSelectElement).value);
+              (val) => {
+                const id = Number(val);
                 if (
-                  val &&
-                  !createForm.copy_accounts_from_group_ids.includes(val)
+                  id &&
+                  !createForm.copy_accounts_from_group_ids.includes(id)
                 ) {
-                  createForm.copy_accounts_from_group_ids.push(val);
+                  createForm.copy_accounts_from_group_ids.push(id);
                 }
-                (e.target as HTMLSelectElement).value = '';
               }
             "
-          >
-            <option value="">
-              {{ t("admin.groups.copyAccounts.selectPlaceholder") }}
-            </option>
-            <option
-              v-for="opt in copyAccountsGroupOptions"
-              :key="opt.value"
-              :value="opt.value"
-              :disabled="
-                createForm.copy_accounts_from_group_ids.includes(opt.value)
-              "
-            >
-              {{ opt.label }}
-            </option>
-          </select>
+          />
           <p class="input-hint">{{ t("admin.groups.copyAccounts.hint") }}</p>
+
         </div>
         <div>
           <label class="input-label">{{
@@ -751,6 +731,74 @@
                 :placeholder="t('admin.groups.subscription.noLimit')"
               />
             </div>
+          </div>
+        </div>
+
+        <!-- Kiro 模拟缓存配置 -->
+        <div v-if="createForm.platform === 'kiro'" class="border-t pt-4">
+          <!-- 粘性路由说明 -->
+          <label class="mb-4 flex items-start gap-3 rounded-md bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+            <input
+              v-model="createForm.kiro_auto_sticky_enabled"
+              type="checkbox"
+              class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>
+              <span class="block text-xs font-medium text-blue-700 dark:text-blue-400">
+                {{ t("admin.groups.kiroCache.stickyRouting") }}
+              </span>
+              <span class="mt-1 block text-xs text-blue-600 dark:text-blue-300">
+                {{ t("admin.groups.kiroCache.stickyRoutingHint") }}
+              </span>
+            </span>
+          </label>
+          <div v-if="createForm.kiro_auto_sticky_enabled" class="mb-4">
+            <label class="input-label">{{ t("admin.groups.kiroCache.stickyTTL") }}</label>
+            <input
+              v-model.number="createForm.kiro_sticky_session_ttl_seconds"
+              type="number"
+              step="60"
+              min="60"
+              max="86400"
+              class="input"
+              placeholder="3600"
+            />
+            <p class="input-hint">{{ t("admin.groups.kiroCache.stickyTTLHint") }}</p>
+          </div>
+          <label class="block mb-2 font-medium text-gray-700 dark:text-gray-300">
+            {{ t("admin.groups.kiroCache.title") }}
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {{ t("admin.groups.kiroCache.description") }}
+          </p>
+          <label class="mb-4 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input
+              v-model="createForm.kiro_cache_emulation_enabled"
+              type="checkbox"
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            {{ t("admin.groups.kiroCache.enabled") }}
+          </label>
+          <div v-if="createForm.kiro_cache_emulation_enabled">
+            <label class="input-label">{{ t("admin.groups.kiroCache.ratio") }}</label>
+            <input
+              v-model.number="createForm.kiro_cache_emulation_ratio"
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              class="input"
+              placeholder="1"
+            />
+            <p class="input-hint">{{ t("admin.groups.kiroCache.ratioHint") }}</p>
+          </div>
+          <div class="mt-3">
+            <label class="input-label">{{ t("admin.groups.kiroCache.endpointMode") }}</label>
+            <Select
+              v-model="createForm.kiro_endpoint_mode"
+              :options="kiroEndpointModeOptions"
+            />
+            <p class="input-hint">{{ t("admin.groups.kiroCache.endpointModeHint") }}</p>
           </div>
         </div>
 
@@ -1394,39 +1442,6 @@
           </div>
         </div>
 
-        <!-- OpenAI Live 开关（仅 openai 平台） -->
-        <div
-          v-if="createForm.platform === 'openai'"
-          class="border-t border-gray-200 dark:border-dark-400 pt-4 mt-4"
-        >
-          <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            {{ t("admin.groups.openaiLive.title") }}
-          </h4>
-          <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-600 dark:text-gray-400">{{
-              t("admin.groups.openaiLive.allow")
-            }}</label>
-            <button
-              type="button"
-              @click="toggleLive('create')"
-              class="relative inline-flex h-6 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-              :class="
-                createForm.allow_live
-                  ? 'bg-primary-500'
-                  : 'bg-gray-300 dark:bg-dark-600'
-              "
-            >
-              <span
-                class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-                :class="createForm.allow_live ? 'translate-x-6' : 'translate-x-1'"
-              />
-            </button>
-          </div>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {{ t("admin.groups.openaiLive.hint") }}
-          </p>
-        </div>
-
         <!-- OpenAI Messages 调度配置（仅 openai 平台） -->
         <div
           v-if="createForm.platform === 'openai'"
@@ -1654,10 +1669,10 @@
           </div>
         </div>
 
-        <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini) -->
+        <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini/Grok/Kiro) -->
         <div
           v-if="
-            ['openai', 'antigravity', 'anthropic', 'gemini'].includes(
+            ['openai', 'antigravity', 'anthropic', 'gemini', 'grok', 'kiro'].includes(
               createForm.platform,
             )
           "
@@ -2103,35 +2118,22 @@
             </span>
           </div>
           <!-- 分组选择下拉 -->
-          <select
-            class="input"
+          <Select
+            :model-value="null"
+            :options="copyAccountsEditSelectOptions"
+            :placeholder="t('admin.groups.copyAccounts.selectPlaceholder')"
             @change="
-              (e) => {
-                const val = Number((e.target as HTMLSelectElement).value);
+              (val) => {
+                const id = Number(val);
                 if (
-                  val &&
-                  !editForm.copy_accounts_from_group_ids.includes(val)
+                  id &&
+                  !editForm.copy_accounts_from_group_ids.includes(id)
                 ) {
-                  editForm.copy_accounts_from_group_ids.push(val);
+                  editForm.copy_accounts_from_group_ids.push(id);
                 }
-                (e.target as HTMLSelectElement).value = '';
               }
             "
-          >
-            <option value="">
-              {{ t("admin.groups.copyAccounts.selectPlaceholder") }}
-            </option>
-            <option
-              v-for="opt in copyAccountsGroupOptionsForEdit"
-              :key="opt.value"
-              :value="opt.value"
-              :disabled="
-                editForm.copy_accounts_from_group_ids.includes(opt.value)
-              "
-            >
-              {{ opt.label }}
-            </option>
-          </select>
+          />
           <p class="input-hint">
             {{ t("admin.groups.copyAccounts.hintEdit") }}
           </p>
@@ -2306,6 +2308,74 @@
                 :placeholder="t('admin.groups.subscription.noLimit')"
               />
             </div>
+          </div>
+        </div>
+
+        <!-- Kiro 模拟缓存配置 -->
+        <div v-if="editForm.platform === 'kiro'" class="border-t pt-4">
+          <!-- 粘性路由说明 -->
+          <label class="mb-4 flex items-start gap-3 rounded-md bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+            <input
+              v-model="editForm.kiro_auto_sticky_enabled"
+              type="checkbox"
+              class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>
+              <span class="block text-xs font-medium text-blue-700 dark:text-blue-400">
+                {{ t("admin.groups.kiroCache.stickyRouting") }}
+              </span>
+              <span class="mt-1 block text-xs text-blue-600 dark:text-blue-300">
+                {{ t("admin.groups.kiroCache.stickyRoutingHint") }}
+              </span>
+            </span>
+          </label>
+          <div v-if="editForm.kiro_auto_sticky_enabled" class="mb-4">
+            <label class="input-label">{{ t("admin.groups.kiroCache.stickyTTL") }}</label>
+            <input
+              v-model.number="editForm.kiro_sticky_session_ttl_seconds"
+              type="number"
+              step="60"
+              min="60"
+              max="86400"
+              class="input"
+              placeholder="3600"
+            />
+            <p class="input-hint">{{ t("admin.groups.kiroCache.stickyTTLHint") }}</p>
+          </div>
+          <label class="block mb-2 font-medium text-gray-700 dark:text-gray-300">
+            {{ t("admin.groups.kiroCache.title") }}
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {{ t("admin.groups.kiroCache.description") }}
+          </p>
+          <label class="mb-4 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input
+              v-model="editForm.kiro_cache_emulation_enabled"
+              type="checkbox"
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            {{ t("admin.groups.kiroCache.enabled") }}
+          </label>
+          <div v-if="editForm.kiro_cache_emulation_enabled">
+            <label class="input-label">{{ t("admin.groups.kiroCache.ratio") }}</label>
+            <input
+              v-model.number="editForm.kiro_cache_emulation_ratio"
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              class="input"
+              placeholder="1"
+            />
+            <p class="input-hint">{{ t("admin.groups.kiroCache.ratioHint") }}</p>
+          </div>
+          <div class="mt-3">
+            <label class="input-label">{{ t("admin.groups.kiroCache.endpointMode") }}</label>
+            <Select
+              v-model="editForm.kiro_endpoint_mode"
+              :options="kiroEndpointModeOptions"
+            />
+            <p class="input-hint">{{ t("admin.groups.kiroCache.endpointModeHint") }}</p>
           </div>
         </div>
 
@@ -2945,39 +3015,6 @@
           </div>
         </div>
 
-        <!-- OpenAI Live 开关（仅 openai 平台） -->
-        <div
-          v-if="editForm.platform === 'openai'"
-          class="border-t border-gray-200 dark:border-dark-400 pt-4 mt-4"
-        >
-          <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            {{ t("admin.groups.openaiLive.title") }}
-          </h4>
-          <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-600 dark:text-gray-400">{{
-              t("admin.groups.openaiLive.allow")
-            }}</label>
-            <button
-              type="button"
-              @click="toggleLive('edit')"
-              class="relative inline-flex h-6 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-              :class="
-                editForm.allow_live
-                  ? 'bg-primary-500'
-                  : 'bg-gray-300 dark:bg-dark-600'
-              "
-            >
-              <span
-                class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-                :class="editForm.allow_live ? 'translate-x-6' : 'translate-x-1'"
-              />
-            </button>
-          </div>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {{ t("admin.groups.openaiLive.hint") }}
-          </p>
-        </div>
-
         <!-- OpenAI Messages 调度配置（仅 openai 平台） -->
         <div
           v-if="editForm.platform === 'openai'"
@@ -3205,10 +3242,10 @@
           </div>
         </div>
 
-        <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini) -->
+        <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini/Grok/Kiro) -->
         <div
           v-if="
-            ['openai', 'antigravity', 'anthropic', 'gemini'].includes(
+            ['openai', 'antigravity', 'anthropic', 'gemini', 'grok', 'kiro'].includes(
               editForm.platform,
             )
           "
@@ -3562,17 +3599,6 @@
       @cancel="showDeleteDialog = false"
     />
 
-    <ConfirmDialog
-      :show="showUnsupportedLiveConfirm"
-      :title="t('admin.groups.openaiLive.unsupportedTitle')"
-      :message="t('admin.groups.openaiLive.unsupportedMessage')"
-      :confirm-text="t('admin.groups.openaiLive.enableAnyway')"
-      :cancel-text="t('common.cancel')"
-      :danger="true"
-      @confirm="confirmUnsupportedLive"
-      @cancel="cancelUnsupportedLive"
-    />
-
     <!-- Sort Order Modal -->
     <BaseDialog
       :show="showSortModal"
@@ -3605,15 +3631,7 @@
                 <span
                   :class="[
                     'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
-                    group.platform === 'anthropic'
-                      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                      : group.platform === 'openai'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : group.platform === 'antigravity'
-                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                          : group.platform === 'grok'
-                            ? 'bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                    platformBadgeLightClass(group.platform),
                   ]"
                 >
                   {{ t("admin.groups.platforms." + group.platform) }}
@@ -4092,6 +4110,7 @@ import {
 } from "./groupsModelsList";
 import { createModelsListCandidatesTracker } from "./groupsModelsListCandidates";
 import { normalizeSupportedModelScopesForPlatform } from "./groupsSupportedModelScopes";
+import { platformBadgeLightClass } from "@/utils/platformColors";
 import {
   normalizeReasoningEffortForPlatform,
   reasoningEffortMappingsToAPI,
@@ -4293,6 +4312,7 @@ const platformOptions = computed(() => [
   { value: "gemini", label: "Gemini" },
   { value: "antigravity", label: "Antigravity" },
   { value: "grok", label: "Grok" },
+  { value: "kiro", label: "Kiro" },
   { value: "composite", label: "Composite" },
 ]);
 
@@ -4303,6 +4323,7 @@ const platformFilterOptions = computed(() => [
   { value: "gemini", label: "Gemini" },
   { value: "antigravity", label: "Antigravity" },
   { value: "grok", label: "Grok" },
+  { value: "kiro", label: "Kiro" },
   { value: "composite", label: "Composite" },
 ]);
 
@@ -4312,6 +4333,7 @@ const compositeRoutePlatformOptions = computed(() => [
   { value: "gemini", label: "Gemini" },
   { value: "antigravity", label: "Antigravity" },
   { value: "grok", label: "Grok" },
+  { value: "kiro", label: "Kiro" },
 ]);
 
 const compositeRouteEndpointOptions = computed(() => [
@@ -4353,6 +4375,11 @@ const editStatusOptions = computed(() => [
 const subscriptionTypeOptions = computed(() => [
   { value: "standard", label: t("admin.groups.subscription.standard") },
   { value: "subscription", label: t("admin.groups.subscription.subscription") },
+]);
+
+const kiroEndpointModeOptions = computed(() => [
+  { value: "q", label: t("admin.groups.kiroCache.endpointModeQ") },
+  { value: "krs", label: t("admin.groups.kiroCache.endpointModeKRS") },
 ]);
 
 // 降级分组选项（创建时）- 仅包含 anthropic 平台且未启用 claude_code_only 的分组
@@ -4451,6 +4478,14 @@ const copyAccountsGroupOptions = computed(() => {
   }));
 });
 
+// 创建表单下拉的选项：将已选分组置为 disabled，避免重复添加
+const copyAccountsCreateSelectOptions = computed(() =>
+  copyAccountsGroupOptions.value.map((opt) => ({
+    ...opt,
+    disabled: createForm.copy_accounts_from_group_ids.includes(opt.value),
+  })),
+);
+
 // 复制账号的源分组选项（编辑时）- 相同平台；composite 分组可汇总各平台账号，排除自身
 const copyAccountsGroupOptionsForEdit = computed(() => {
   const currentId = editingGroup.value?.id;
@@ -4465,6 +4500,14 @@ const copyAccountsGroupOptionsForEdit = computed(() => {
     label: copyAccountsGroupLabel(g),
   }));
 });
+
+// 编辑表单下拉的选项：将已选分组置为 disabled
+const copyAccountsEditSelectOptions = computed(() =>
+  copyAccountsGroupOptionsForEdit.value.map((opt) => ({
+    ...opt,
+    disabled: editForm.copy_accounts_from_group_ids.includes(opt.value),
+  })),
+);
 
 const groups = ref<AdminGroup[]>([]);
 const loading = ref(false);
@@ -4510,15 +4553,6 @@ let abortController: AbortController | null = null;
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showDeleteDialog = ref(false);
-const pendingLiveForm = ref<"create" | "edit" | null>(null);
-const showUnsupportedLiveConfirm = computed(
-  () => pendingLiveForm.value !== null,
-);
-const liveCapability = ref<{ supported: boolean; reason?: string } | null>(null);
-let liveCapabilityRequest: Promise<{
-  supported: boolean;
-  reason?: string;
-}> | null = null;
 const showSortModal = ref(false);
 const submitting = ref(false);
 const sortSubmitting = ref(false);
@@ -4621,7 +4655,6 @@ const createForm = reactive({
   fallback_group_id_on_invalid_request: null as number | null,
   // OpenAI Messages 调度配置（仅 openai 平台使用）
   allow_messages_dispatch: false,
-  allow_live: false,
   opus_mapped_model: createMessagesDispatchDefaults.opus_mapped_model,
   sonnet_mapped_model: createMessagesDispatchDefaults.sonnet_mapped_model,
   haiku_mapped_model: createMessagesDispatchDefaults.haiku_mapped_model,
@@ -4639,6 +4672,12 @@ const createForm = reactive({
   copy_accounts_from_group_ids: [] as number[],
   // 分组级 RPM 限制（每用户每分钟最大请求数；0 = 不限制）
   rpm_limit: 0 as number,
+  // Kiro 模拟缓存配置（仅 Kiro 平台）
+  kiro_cache_emulation_enabled: false,
+  kiro_auto_sticky_enabled: true,
+  kiro_sticky_session_ttl_seconds: 3600,
+  kiro_cache_emulation_ratio: 1,
+  kiro_endpoint_mode: "q" as "q" | "krs",
   max_reasoning_effort: "",
   reasoning_effort_mappings: [] as ReasoningEffortMappingRow[],
 });
@@ -4971,7 +5010,6 @@ const editForm = reactive({
   fallback_group_id_on_invalid_request: null as number | null,
   // OpenAI Messages 调度配置（仅 openai 平台使用）
   allow_messages_dispatch: false,
-  allow_live: false,
   default_mapped_model: '',
   opus_mapped_model: editMessagesDispatchDefaults.opus_mapped_model,
   sonnet_mapped_model: editMessagesDispatchDefaults.sonnet_mapped_model,
@@ -4990,6 +5028,12 @@ const editForm = reactive({
   copy_accounts_from_group_ids: [] as number[],
   // 分组级 RPM 限制（每用户每分钟最大请求数；0 = 不限制）
   rpm_limit: 0 as number,
+  // Kiro 模拟缓存配置（仅 Kiro 平台）
+  kiro_cache_emulation_enabled: false,
+  kiro_auto_sticky_enabled: true,
+  kiro_sticky_session_ttl_seconds: 3600,
+  kiro_cache_emulation_ratio: 1,
+  kiro_endpoint_mode: "q" as "q" | "krs",
   max_reasoning_effort: "",
   reasoning_effort_mappings: [] as ReasoningEffortMappingRow[],
 });
@@ -5168,44 +5212,6 @@ const deleteConfirmMessage = computed(() => {
   }
   return t("admin.groups.deleteConfirm", { name: deletingGroup.value.name });
 });
-
-const loadLiveCapability = async () => {
-  if (liveCapability.value) return liveCapability.value;
-  if (!liveCapabilityRequest) {
-    liveCapabilityRequest = adminAPI.groups
-      .getLiveCapability()
-      .catch(() => ({ supported: false }))
-      .finally(() => {
-        liveCapabilityRequest = null;
-      });
-  }
-  liveCapability.value = await liveCapabilityRequest;
-  return liveCapability.value ?? { supported: false };
-};
-
-const toggleLive = async (target: "create" | "edit") => {
-  const form = target === "create" ? createForm : editForm;
-  if (form.allow_live) {
-    form.allow_live = false;
-    return;
-  }
-  const capability = await loadLiveCapability();
-  if (capability.supported) {
-    form.allow_live = true;
-    return;
-  }
-  pendingLiveForm.value = target;
-};
-
-const confirmUnsupportedLive = () => {
-  if (pendingLiveForm.value === "create") createForm.allow_live = true;
-  if (pendingLiveForm.value === "edit") editForm.allow_live = true;
-  pendingLiveForm.value = null;
-};
-
-const cancelUnsupportedLive = () => {
-  pendingLiveForm.value = null;
-};
 
 const loadGroups = async () => {
   if (abortController) {
@@ -5413,13 +5419,17 @@ const closeCreateModal = () => {
   createForm.fallback_group_id = null;
   createForm.fallback_group_id_on_invalid_request = null;
   resetMessagesDispatchFormState(createForm);
-  createForm.allow_live = false;
   createForm.require_oauth_only = false;
   createForm.require_privacy_set = false;
   createForm.supported_model_scopes = ["claude", "gemini_text", "gemini_image"];
   createForm.mcp_xml_inject = true;
   createForm.copy_accounts_from_group_ids = [];
   createForm.rpm_limit = 0;
+  createForm.kiro_cache_emulation_enabled = false;
+  createForm.kiro_auto_sticky_enabled = true;
+  createForm.kiro_sticky_session_ttl_seconds = 3600;
+  createForm.kiro_cache_emulation_ratio = 1;
+  createForm.kiro_endpoint_mode = "q";
   createForm.max_reasoning_effort = "";
   createForm.reasoning_effort_mappings = [];
   createReasoningEffortPolicyRef.value?.resetValidation();
@@ -5454,6 +5464,16 @@ const normalizeRateMultiplier = (
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
+};
+
+const normalizeKiroStickySessionTTL = (
+  value: number | string | null | undefined,
+): number => {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return 3600;
+  }
+  return Math.min(86400, Math.max(60, Math.trunc(seconds)));
 };
 
 const handleCreateGroup = async () => {
@@ -5533,6 +5553,17 @@ const handleCreateGroup = async () => {
     requestData.web_search_price_per_call = emptyToNull(
       requestData.web_search_price_per_call,
     );
+    if (requestData.platform !== "kiro") {
+      requestData.kiro_auto_sticky_enabled = false;
+      requestData.kiro_sticky_session_ttl_seconds = 0;
+      requestData.kiro_cache_emulation_enabled = false;
+      requestData.kiro_cache_emulation_ratio = 0;
+      requestData.kiro_endpoint_mode = "q";
+    } else {
+      requestData.kiro_sticky_session_ttl_seconds = normalizeKiroStickySessionTTL(
+        requestData.kiro_sticky_session_ttl_seconds,
+      );
+    }
     requestData.peak_rate_enabled = createForm.peak_rate_enabled;
     requestData.peak_start = createForm.peak_start;
     requestData.peak_end = createForm.peak_end;
@@ -5601,7 +5632,6 @@ const handleEdit = async (group: AdminGroup) => {
   editForm.allow_messages_dispatch =
     group.allow_messages_dispatch ||
     messagesDispatchFormState.allow_messages_dispatch;
-  editForm.allow_live = group.allow_live ?? false;
   editForm.opus_mapped_model = messagesDispatchFormState.opus_mapped_model;
   editForm.sonnet_mapped_model = messagesDispatchFormState.sonnet_mapped_model;
   editForm.haiku_mapped_model = messagesDispatchFormState.haiku_mapped_model;
@@ -5618,6 +5648,13 @@ const handleEdit = async (group: AdminGroup) => {
   editForm.mcp_xml_inject = group.mcp_xml_inject ?? true;
   editForm.copy_accounts_from_group_ids = []; // 复制账号字段每次编辑时重置为空
   editForm.rpm_limit = group.rpm_limit ?? 0;
+  editForm.kiro_auto_sticky_enabled =
+    group.kiro_auto_sticky_enabled ?? group.platform === "kiro";
+  editForm.kiro_sticky_session_ttl_seconds =
+    group.kiro_sticky_session_ttl_seconds ?? 3600;
+  editForm.kiro_cache_emulation_enabled = group.kiro_cache_emulation_enabled ?? false;
+  editForm.kiro_cache_emulation_ratio = group.kiro_cache_emulation_ratio ?? 1;
+  editForm.kiro_endpoint_mode = group.kiro_endpoint_mode === "krs" ? "krs" : "q";
   editForm.max_reasoning_effort = normalizeReasoningEffortForPlatform(
     group.platform,
     group.max_reasoning_effort,
@@ -5658,7 +5695,6 @@ const closeEditModal = () => {
   editForm.video_price_1080p = null;
   editForm.web_search_price_per_call = null;
   resetMessagesDispatchFormState(editForm);
-  editForm.allow_live = false;
   resetModelsListState(editModelsListState);
 };
 
@@ -5749,6 +5785,17 @@ const handleUpdateGroup = async () => {
     payload.web_search_price_per_call = emptyPriceToClear(
       payload.web_search_price_per_call,
     );
+    if (payload.platform !== "kiro") {
+      payload.kiro_auto_sticky_enabled = false;
+      payload.kiro_sticky_session_ttl_seconds = 0;
+      payload.kiro_cache_emulation_enabled = false;
+      payload.kiro_cache_emulation_ratio = 0;
+      payload.kiro_endpoint_mode = "q";
+    } else {
+      payload.kiro_sticky_session_ttl_seconds = normalizeKiroStickySessionTTL(
+        payload.kiro_sticky_session_ttl_seconds,
+      );
+    }
     payload.peak_rate_enabled = editForm.peak_rate_enabled;
     payload.peak_start = editForm.peak_start;
     payload.peak_end = editForm.peak_end;
@@ -6063,7 +6110,6 @@ watch(
     }
     if (newVal !== "openai") {
       resetMessagesDispatchFormState(createForm);
-      createForm.allow_live = false;
     }
     createForm.max_reasoning_effort = normalizeReasoningEffortForPlatform(
       newVal,
@@ -6074,7 +6120,7 @@ watch(
       newVal,
     );
     createReasoningEffortPolicyRef.value?.resetValidation();
-    if (!["openai", "antigravity", "anthropic", "gemini"].includes(newVal)) {
+    if (!["openai", "antigravity", "anthropic", "gemini", "grok", "kiro"].includes(newVal)) {
       createForm.require_oauth_only = false;
       createForm.require_privacy_set = false;
     }
@@ -6106,7 +6152,6 @@ watch(
     }
     if (newVal !== "openai") {
       resetMessagesDispatchFormState(editForm);
-      editForm.allow_live = false;
     }
     editForm.max_reasoning_effort = normalizeReasoningEffortForPlatform(
       newVal,
@@ -6117,7 +6162,7 @@ watch(
       newVal,
     );
     editReasoningEffortPolicyRef.value?.resetValidation();
-    if (!["openai", "antigravity", "anthropic", "gemini"].includes(newVal)) {
+    if (!["openai", "antigravity", "anthropic", "gemini", "grok", "kiro"].includes(newVal)) {
       editForm.require_oauth_only = false;
       editForm.require_privacy_set = false;
     }
@@ -6151,7 +6196,6 @@ watch(
     }
     if (newVal !== 'openai') {
       editForm.allow_messages_dispatch = false
-      editForm.allow_live = false
       editForm.default_mapped_model = ''
     }
   }
@@ -6217,7 +6261,6 @@ const saveSortOrder = async () => {
 
 onMounted(() => {
   loadGroups();
-  void loadLiveCapability();
   loadModelsListCandidates("create", 0, createForm.platform);
   document.addEventListener("click", handleClickOutside);
 });

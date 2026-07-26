@@ -10,6 +10,7 @@ import (
 	htmlpkg "html"
 	"io"
 	"io/fs"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -74,6 +75,27 @@ func NewFrontendServer(settingsProvider PublicSettingsProvider) (*FrontendServer
 		settings:    settingsProvider,
 		overrideDir: filepath.Join("data", "public"),
 	}, nil
+}
+
+// RegisterEmbeddedFrontend mounts embedded frontend middleware with settings injection.
+func RegisterEmbeddedFrontend(
+	r *gin.Engine,
+	settings PublicSettingsProvider,
+	setOnUpdateCallback func(func()),
+	refreshFrameOrigins func(),
+) {
+	frontendServer, err := NewFrontendServer(settings)
+	if err != nil {
+		log.Printf("Warning: Failed to create frontend server with settings injection: %v, using legacy mode", err)
+		r.Use(ServeEmbeddedFrontend())
+		setOnUpdateCallback(refreshFrameOrigins)
+		return
+	}
+	setOnUpdateCallback(func() {
+		frontendServer.InvalidateCache()
+		refreshFrameOrigins()
+	})
+	r.Use(frontendServer.Middleware())
 }
 
 // InvalidateCache invalidates the HTML cache (call when settings change)

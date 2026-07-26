@@ -13,21 +13,19 @@ import (
 )
 
 type userRepoStub struct {
-	user           *User
-	getErr         error
-	createErr      error
-	deleteErr      error
-	exists         bool
-	existsErr      error
-	aliasExists    bool
-	aliasErr       error
-	guardedCreates int
-	nextID         int64
-	created        []*User
-	updated        []*User
-	deletedIDs     []int64
-	usersByEmail   map[string]*User
-	getByEmailErr  error
+	user          *User
+	getErr        error
+	createErr     error
+	deleteErr     error
+	exists        bool
+	existsErr     error
+	nextID        int64
+	created       []*User
+	updated       []*User
+	deletedIDs    []int64
+	usersByEmail  map[string]*User
+	usersByID     map[int64]*User
+	getByEmailErr error
 }
 
 func (s *userRepoStub) Create(ctx context.Context, user *User) error {
@@ -46,20 +44,15 @@ func (s *userRepoStub) Create(ctx context.Context, user *User) error {
 	return nil
 }
 
-func (s *userRepoStub) CreateWithEmailAliasGuard(ctx context.Context, user *User) error {
-	s.guardedCreates++
-	if s.aliasErr != nil {
-		return s.aliasErr
-	}
-	if s.aliasExists {
-		return ErrEmailExists
-	}
-	return s.Create(ctx, user)
-}
-
 func (s *userRepoStub) GetByID(ctx context.Context, id int64) (*User, error) {
 	if s.getErr != nil {
 		return nil, s.getErr
+	}
+	if s.usersByID != nil {
+		if user, ok := s.usersByID[id]; ok {
+			return user, nil
+		}
+		return nil, ErrUserNotFound
 	}
 	if s.user == nil {
 		return nil, ErrUserNotFound
@@ -156,13 +149,6 @@ func (s *userRepoStub) ExistsByEmail(ctx context.Context, email string) (bool, e
 		return false, s.existsErr
 	}
 	return s.exists, nil
-}
-
-func (s *userRepoStub) ExistsByEmailAlias(ctx context.Context, email string) (bool, error) {
-	if s.aliasErr != nil {
-		return false, s.aliasErr
-	}
-	return s.aliasExists, nil
 }
 
 func (s *userRepoStub) RemoveGroupFromAllowedGroups(ctx context.Context, groupID int64) (int64, error) {
@@ -606,6 +592,24 @@ func TestAdminService_DeleteUser_DeleteError(t *testing.T) {
 	err := svc.DeleteUser(context.Background(), 9)
 	require.ErrorIs(t, err, deleteErr)
 	require.Equal(t, []int64{9}, repo.deletedIDs)
+}
+
+func TestAdminService_BatchDeleteUsers_SkipsAdminAndDeletesOthers(t *testing.T) {
+	repo := &userRepoStub{
+		usersByID: map[int64]*User{
+			1: {ID: 1, Role: RoleAdmin},
+			2: {ID: 2, Role: RoleUser},
+			3: {ID: 3, Role: RoleUser},
+		},
+	}
+	svc := &adminServiceImpl{userRepo: repo}
+
+	result, err := svc.BatchDeleteUsers(context.Background(), []int64{1, 2, 3})
+	require.NoError(t, err)
+	require.Equal(t, []int64{2, 3}, result.DeletedIDs)
+	require.Len(t, result.Skipped, 1)
+	require.Equal(t, int64(1), result.Skipped[0].ID)
+	require.Contains(t, result.Skipped[0].Reason, "cannot delete admin user")
 }
 
 func TestAdminService_DeleteGroup_Success_WithCacheInvalidation(t *testing.T) {

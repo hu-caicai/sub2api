@@ -250,6 +250,90 @@ func (_u *UserSubscriptionUpdate) AddMonthlyUsageUsd(v float64) *UserSubscriptio
 	return _u
 }
 
+// SetDailyUsageTokens sets the "daily_usage_tokens" field.
+func (_u *UserSubscriptionUpdate) SetDailyUsageTokens(v int64) *UserSubscriptionUpdate {
+	_u.mutation.ResetDailyUsageTokens()
+	_u.mutation.SetDailyUsageTokens(v)
+	return _u
+}
+
+// SetNillableDailyUsageTokens sets the "daily_usage_tokens" field if the given value is not nil.
+func (_u *UserSubscriptionUpdate) SetNillableDailyUsageTokens(v *int64) *UserSubscriptionUpdate {
+	if v != nil {
+		_u.SetDailyUsageTokens(*v)
+	}
+	return _u
+}
+
+// AddDailyUsageTokens adds value to the "daily_usage_tokens" field.
+func (_u *UserSubscriptionUpdate) AddDailyUsageTokens(v int64) *UserSubscriptionUpdate {
+	_u.mutation.AddDailyUsageTokens(v)
+	return _u
+}
+
+// SetWeeklyUsageTokens sets the "weekly_usage_tokens" field.
+func (_u *UserSubscriptionUpdate) SetWeeklyUsageTokens(v int64) *UserSubscriptionUpdate {
+	_u.mutation.ResetWeeklyUsageTokens()
+	_u.mutation.SetWeeklyUsageTokens(v)
+	return _u
+}
+
+// SetNillableWeeklyUsageTokens sets the "weekly_usage_tokens" field if the given value is not nil.
+func (_u *UserSubscriptionUpdate) SetNillableWeeklyUsageTokens(v *int64) *UserSubscriptionUpdate {
+	if v != nil {
+		_u.SetWeeklyUsageTokens(*v)
+	}
+	return _u
+}
+
+// AddWeeklyUsageTokens adds value to the "weekly_usage_tokens" field.
+func (_u *UserSubscriptionUpdate) AddWeeklyUsageTokens(v int64) *UserSubscriptionUpdate {
+	_u.mutation.AddWeeklyUsageTokens(v)
+	return _u
+}
+
+// SetMonthlyUsageTokens sets the "monthly_usage_tokens" field.
+func (_u *UserSubscriptionUpdate) SetMonthlyUsageTokens(v int64) *UserSubscriptionUpdate {
+	_u.mutation.ResetMonthlyUsageTokens()
+	_u.mutation.SetMonthlyUsageTokens(v)
+	return _u
+}
+
+// SetNillableMonthlyUsageTokens sets the "monthly_usage_tokens" field if the given value is not nil.
+func (_u *UserSubscriptionUpdate) SetNillableMonthlyUsageTokens(v *int64) *UserSubscriptionUpdate {
+	if v != nil {
+		_u.SetMonthlyUsageTokens(*v)
+	}
+	return _u
+}
+
+// AddMonthlyUsageTokens adds value to the "monthly_usage_tokens" field.
+func (_u *UserSubscriptionUpdate) AddMonthlyUsageTokens(v int64) *UserSubscriptionUpdate {
+	_u.mutation.AddMonthlyUsageTokens(v)
+	return _u
+}
+
+// SetManualResetCredits sets the "manual_reset_credits" field.
+func (_u *UserSubscriptionUpdate) SetManualResetCredits(v int) *UserSubscriptionUpdate {
+	_u.mutation.ResetManualResetCredits()
+	_u.mutation.SetManualResetCredits(v)
+	return _u
+}
+
+// SetNillableManualResetCredits sets the "manual_reset_credits" field if the given value is not nil.
+func (_u *UserSubscriptionUpdate) SetNillableManualResetCredits(v *int) *UserSubscriptionUpdate {
+	if v != nil {
+		_u.SetManualResetCredits(*v)
+	}
+	return _u
+}
+
+// AddManualResetCredits adds value to the "manual_reset_credits" field.
+func (_u *UserSubscriptionUpdate) AddManualResetCredits(v int) *UserSubscriptionUpdate {
+	_u.mutation.AddManualResetCredits(v)
+	return _u
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (_u *UserSubscriptionUpdate) SetAssignedBy(v int64) *UserSubscriptionUpdate {
 	_u.mutation.SetAssignedBy(v)
@@ -441,6 +525,11 @@ func (_u *UserSubscriptionUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ManualResetCredits(); ok {
+		if err := usersubscription.ManualResetCreditsValidator(v); err != nil {
+			return &ValidationError{Name: "manual_reset_credits", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.manual_reset_credits": %w`, err)}
+		}
+	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UserSubscription.user"`)
 	}
@@ -515,6 +604,30 @@ func (_u *UserSubscriptionUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if value, ok := _u.mutation.AddedMonthlyUsageUsd(); ok {
 		_spec.AddField(usersubscription.FieldMonthlyUsageUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.DailyUsageTokens(); ok {
+		_spec.SetField(usersubscription.FieldDailyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedDailyUsageTokens(); ok {
+		_spec.AddField(usersubscription.FieldDailyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.WeeklyUsageTokens(); ok {
+		_spec.SetField(usersubscription.FieldWeeklyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedWeeklyUsageTokens(); ok {
+		_spec.AddField(usersubscription.FieldWeeklyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.MonthlyUsageTokens(); ok {
+		_spec.SetField(usersubscription.FieldMonthlyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedMonthlyUsageTokens(); ok {
+		_spec.AddField(usersubscription.FieldMonthlyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ManualResetCredits(); ok {
+		_spec.SetField(usersubscription.FieldManualResetCredits, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedManualResetCredits(); ok {
+		_spec.AddField(usersubscription.FieldManualResetCredits, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.AssignedAt(); ok {
 		_spec.SetField(usersubscription.FieldAssignedAt, field.TypeTime, value)
@@ -896,6 +1009,90 @@ func (_u *UserSubscriptionUpdateOne) AddMonthlyUsageUsd(v float64) *UserSubscrip
 	return _u
 }
 
+// SetDailyUsageTokens sets the "daily_usage_tokens" field.
+func (_u *UserSubscriptionUpdateOne) SetDailyUsageTokens(v int64) *UserSubscriptionUpdateOne {
+	_u.mutation.ResetDailyUsageTokens()
+	_u.mutation.SetDailyUsageTokens(v)
+	return _u
+}
+
+// SetNillableDailyUsageTokens sets the "daily_usage_tokens" field if the given value is not nil.
+func (_u *UserSubscriptionUpdateOne) SetNillableDailyUsageTokens(v *int64) *UserSubscriptionUpdateOne {
+	if v != nil {
+		_u.SetDailyUsageTokens(*v)
+	}
+	return _u
+}
+
+// AddDailyUsageTokens adds value to the "daily_usage_tokens" field.
+func (_u *UserSubscriptionUpdateOne) AddDailyUsageTokens(v int64) *UserSubscriptionUpdateOne {
+	_u.mutation.AddDailyUsageTokens(v)
+	return _u
+}
+
+// SetWeeklyUsageTokens sets the "weekly_usage_tokens" field.
+func (_u *UserSubscriptionUpdateOne) SetWeeklyUsageTokens(v int64) *UserSubscriptionUpdateOne {
+	_u.mutation.ResetWeeklyUsageTokens()
+	_u.mutation.SetWeeklyUsageTokens(v)
+	return _u
+}
+
+// SetNillableWeeklyUsageTokens sets the "weekly_usage_tokens" field if the given value is not nil.
+func (_u *UserSubscriptionUpdateOne) SetNillableWeeklyUsageTokens(v *int64) *UserSubscriptionUpdateOne {
+	if v != nil {
+		_u.SetWeeklyUsageTokens(*v)
+	}
+	return _u
+}
+
+// AddWeeklyUsageTokens adds value to the "weekly_usage_tokens" field.
+func (_u *UserSubscriptionUpdateOne) AddWeeklyUsageTokens(v int64) *UserSubscriptionUpdateOne {
+	_u.mutation.AddWeeklyUsageTokens(v)
+	return _u
+}
+
+// SetMonthlyUsageTokens sets the "monthly_usage_tokens" field.
+func (_u *UserSubscriptionUpdateOne) SetMonthlyUsageTokens(v int64) *UserSubscriptionUpdateOne {
+	_u.mutation.ResetMonthlyUsageTokens()
+	_u.mutation.SetMonthlyUsageTokens(v)
+	return _u
+}
+
+// SetNillableMonthlyUsageTokens sets the "monthly_usage_tokens" field if the given value is not nil.
+func (_u *UserSubscriptionUpdateOne) SetNillableMonthlyUsageTokens(v *int64) *UserSubscriptionUpdateOne {
+	if v != nil {
+		_u.SetMonthlyUsageTokens(*v)
+	}
+	return _u
+}
+
+// AddMonthlyUsageTokens adds value to the "monthly_usage_tokens" field.
+func (_u *UserSubscriptionUpdateOne) AddMonthlyUsageTokens(v int64) *UserSubscriptionUpdateOne {
+	_u.mutation.AddMonthlyUsageTokens(v)
+	return _u
+}
+
+// SetManualResetCredits sets the "manual_reset_credits" field.
+func (_u *UserSubscriptionUpdateOne) SetManualResetCredits(v int) *UserSubscriptionUpdateOne {
+	_u.mutation.ResetManualResetCredits()
+	_u.mutation.SetManualResetCredits(v)
+	return _u
+}
+
+// SetNillableManualResetCredits sets the "manual_reset_credits" field if the given value is not nil.
+func (_u *UserSubscriptionUpdateOne) SetNillableManualResetCredits(v *int) *UserSubscriptionUpdateOne {
+	if v != nil {
+		_u.SetManualResetCredits(*v)
+	}
+	return _u
+}
+
+// AddManualResetCredits adds value to the "manual_reset_credits" field.
+func (_u *UserSubscriptionUpdateOne) AddManualResetCredits(v int) *UserSubscriptionUpdateOne {
+	_u.mutation.AddManualResetCredits(v)
+	return _u
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (_u *UserSubscriptionUpdateOne) SetAssignedBy(v int64) *UserSubscriptionUpdateOne {
 	_u.mutation.SetAssignedBy(v)
@@ -1100,6 +1297,11 @@ func (_u *UserSubscriptionUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ManualResetCredits(); ok {
+		if err := usersubscription.ManualResetCreditsValidator(v); err != nil {
+			return &ValidationError{Name: "manual_reset_credits", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.manual_reset_credits": %w`, err)}
+		}
+	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UserSubscription.user"`)
 	}
@@ -1191,6 +1393,30 @@ func (_u *UserSubscriptionUpdateOne) sqlSave(ctx context.Context) (_node *UserSu
 	}
 	if value, ok := _u.mutation.AddedMonthlyUsageUsd(); ok {
 		_spec.AddField(usersubscription.FieldMonthlyUsageUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.DailyUsageTokens(); ok {
+		_spec.SetField(usersubscription.FieldDailyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedDailyUsageTokens(); ok {
+		_spec.AddField(usersubscription.FieldDailyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.WeeklyUsageTokens(); ok {
+		_spec.SetField(usersubscription.FieldWeeklyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedWeeklyUsageTokens(); ok {
+		_spec.AddField(usersubscription.FieldWeeklyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.MonthlyUsageTokens(); ok {
+		_spec.SetField(usersubscription.FieldMonthlyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedMonthlyUsageTokens(); ok {
+		_spec.AddField(usersubscription.FieldMonthlyUsageTokens, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ManualResetCredits(); ok {
+		_spec.SetField(usersubscription.FieldManualResetCredits, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedManualResetCredits(); ok {
+		_spec.AddField(usersubscription.FieldManualResetCredits, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.AssignedAt(); ok {
 		_spec.SetField(usersubscription.FieldAssignedAt, field.TypeTime, value)

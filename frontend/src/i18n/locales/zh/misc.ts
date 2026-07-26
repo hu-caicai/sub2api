@@ -127,12 +127,28 @@ export default {
     daily: '每日',
     weekly: '每周',
     monthly: '每月',
+    tokenConsumed: '消耗: {tokens} token',
     daysRemaining: '剩余 {days} 天',
     expiresOn: '{date} 到期',
     resetIn: '{time} 后重置',
     quotaEndsIn: '额度将在 {time} 后结束',
     windowNotActive: '等待首次使用',
-    usageOf: '已用 {used} / {limit}'
+    quotaEnded: '额度已结束',
+    oneTimeDailyHint: '24小时有效，日卡不自动重置；再买同套餐后需点击重置才起算新周期',
+    usageOf: '已用 {used} / {limit}',
+    manualReset: {
+      remaining: '剩余 {count} 次手动重置机会',
+      inactive: '订阅未生效，暂不可重置',
+      expired: '订阅已过期，暂不可重置',
+      expiredNoCredits: '订阅已过期，暂无重置机会，再次购买同套餐可获得',
+      revoked: '订阅已撤销，不可重置',
+      noCredits: '暂无重置机会，再次购买同套餐可获得',
+      pendingActivate: '已购买待激活：点击重置后清零日额度，并从此刻起算 24 小时',
+      button: '重置日额度',
+      confirm: '确认消耗 1 次重置机会？将清零日额度，并从现在起重新计算 24 小时有效期。',
+      success: '日额度已重置，新的 24 小时已开始',
+      failed: '重置失败'
+    }
   },
 
   // Onboarding Tour
@@ -520,7 +536,9 @@ export default {
       weeks: '周',
       months: '月',
       searchOrders: '搜索订单...',
+      searchPlans: '搜索套餐名称、分组、币种...',
       allStatuses: '全部状态',
+      allSaleStatuses: '全部上架状态',
       allPaymentTypes: '全部支付方式',
       allOrderTypes: '全部订单类型',
       orderDetail: '订单详情',

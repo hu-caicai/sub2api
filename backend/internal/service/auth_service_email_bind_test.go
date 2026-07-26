@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS user_provider_default_grants (
 		emailSvc = service.NewEmailService(settingRepo, emailCache)
 	}
 
-	svc := service.NewAuthService(client, repo, nil, refreshTokenCache, cfg, settingSvc, emailSvc, nil, nil, nil, defaultSubAssigner, nil, nil)
+	svc := service.NewAuthService(client, repo, nil, refreshTokenCache, cfg, settingSvc, emailSvc, nil, nil, nil, defaultSubAssigner, nil, nil, nil)
 	return svc, repo, client
 }
 
@@ -467,7 +467,7 @@ func TestAuthServiceBindEmailIdentity_RevokesExistingAccessAndRefreshTokens(t *t
 		},
 	}
 	emailService := service.NewEmailService(nil, cache)
-	svc := service.NewAuthService(nil, userRepo, nil, refreshTokenCache, cfg, nil, emailService, nil, nil, nil, nil, nil, nil)
+	svc := service.NewAuthService(nil, userRepo, nil, refreshTokenCache, cfg, nil, emailService, nil, nil, nil, nil, nil, nil, nil)
 
 	oldTokenPair, err := svc.GenerateTokenPair(ctx, &service.User{
 		ID:           41,
@@ -874,10 +874,6 @@ func newEmailBindUserRepoStub(user *service.User) *emailBindUserRepoStub {
 
 func (s *emailBindUserRepoStub) Create(context.Context, *service.User) error { return nil }
 
-func (s *emailBindUserRepoStub) CreateWithEmailAliasGuard(ctx context.Context, user *service.User) error {
-	return s.Create(ctx, user)
-}
-
 func (s *emailBindUserRepoStub) GetByID(_ context.Context, id int64) (*service.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -959,18 +955,6 @@ func (s *emailBindUserRepoStub) ExistsByEmail(_ context.Context, email string) (
 	defer s.mu.Unlock()
 	_, ok := s.usersByEmail[email]
 	return ok, nil
-}
-
-func (s *emailBindUserRepoStub) ExistsByEmailAlias(_ context.Context, email string) (bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	identity := service.NormalizeEmailForAliasDedup(email)
-	for stored := range s.usersByEmail {
-		if service.NormalizeEmailForAliasDedup(stored) == identity {
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 func (s *emailBindUserRepoStub) BatchSetConcurrency(context.Context, []int64, int) (int, error) {

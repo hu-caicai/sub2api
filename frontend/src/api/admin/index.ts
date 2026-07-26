@@ -18,6 +18,7 @@ import usageAPI from './usage'
 import geminiAPI from './gemini'
 import antigravityAPI from './antigravity'
 import grokAPI from './grok'
+import kiroAPI from './kiro'
 import userAttributesAPI from './userAttributes'
 import opsAPI from './ops'
 import errorPassthroughAPI from './errorPassthrough'
@@ -33,6 +34,7 @@ import adminPaymentAPI from './payment'
 import affiliatesAPI from './affiliates'
 import riskControlAPI from './riskControl'
 import adminComplianceAPI from './compliance'
+import ipBansAPI from './ipBans'
 import auditAPI from './audit'
 
 /**
@@ -54,6 +56,7 @@ export const adminAPI = {
   gemini: geminiAPI,
   antigravity: antigravityAPI,
   grok: grokAPI,
+  kiro: kiroAPI,
   userAttributes: userAttributesAPI,
   ops: opsAPI,
   errorPassthrough: errorPassthroughAPI,
@@ -69,6 +72,7 @@ export const adminAPI = {
   affiliates: affiliatesAPI,
   riskControl: riskControlAPI,
   compliance: adminComplianceAPI,
+  ipBans: ipBansAPI,
   audit: auditAPI
 }
 
@@ -88,6 +92,7 @@ export {
   geminiAPI,
   antigravityAPI,
   grokAPI,
+  kiroAPI,
   userAttributesAPI,
   opsAPI,
   errorPassthroughAPI,
@@ -103,6 +108,7 @@ export {
   affiliatesAPI,
   riskControlAPI,
   adminComplianceAPI,
+  ipBansAPI,
   auditAPI
 }
 

@@ -121,6 +121,7 @@ func TestGetUserErrorRequestDetail_OwnershipEnforced(t *testing.T) {
 	}
 	if got2 == nil {
 		t.Fatal("expected non-nil detail for legitimate access")
+		return
 	}
 	if got2.ID != 42 {
 		t.Errorf("want ID=42, got %d", got2.ID)
@@ -156,6 +157,7 @@ func TestGetUserErrorRequestDetail_InvalidID(t *testing.T) {
 	_, err := svc.GetUserErrorRequestDetail(context.Background(), 1, 0)
 	if err == nil {
 		t.Fatal("expected error for id=0")
+		return
 	}
 	_, err = svc.GetUserErrorRequestDetail(context.Background(), 1, -5)
 	if err == nil {

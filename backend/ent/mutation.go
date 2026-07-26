@@ -31,6 +31,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
+	"github.com/Wei-Shaw/sub2api/ent/ipban"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
@@ -81,6 +82,7 @@ const (
 	TypeCompositeModelRoute           = "CompositeModelRoute"
 	TypeErrorPassthroughRule          = "ErrorPassthroughRule"
 	TypeGroup                         = "Group"
+	TypeIPBan                         = "IPBan"
 	TypeIdempotencyRecord             = "IdempotencyRecord"
 	TypeIdentityAdoptionDecision      = "IdentityAdoptionDecision"
 	TypePaymentAuditLog               = "PaymentAuditLog"
@@ -21911,7 +21913,6 @@ type GroupMutation struct {
 	sort_order                              *int
 	addsort_order                           *int
 	allow_messages_dispatch                 *bool
-	allow_live                              *bool
 	require_oauth_only                      *bool
 	require_privacy_set                     *bool
 	default_mapped_model                    *string
@@ -21919,6 +21920,13 @@ type GroupMutation struct {
 	models_list_config                      *domain.GroupModelsListConfig
 	rpm_limit                               *int
 	addrpm_limit                            *int
+	kiro_cache_emulation_enabled            *bool
+	kiro_auto_sticky_enabled                *bool
+	kiro_sticky_session_ttl_seconds         *int
+	addkiro_sticky_session_ttl_seconds      *int
+	kiro_cache_emulation_ratio              *float64
+	addkiro_cache_emulation_ratio           *float64
+	kiro_endpoint_mode                      *string
 	max_reasoning_effort                    *string
 	reasoning_effort_mappings               *[]domain.ReasoningEffortMapping
 	appendreasoning_effort_mappings         []domain.ReasoningEffortMapping
@@ -24227,42 +24235,6 @@ func (m *GroupMutation) ResetAllowMessagesDispatch() {
 	m.allow_messages_dispatch = nil
 }
 
-// SetAllowLive sets the "allow_live" field.
-func (m *GroupMutation) SetAllowLive(b bool) {
-	m.allow_live = &b
-}
-
-// AllowLive returns the value of the "allow_live" field in the mutation.
-func (m *GroupMutation) AllowLive() (r bool, exists bool) {
-	v := m.allow_live
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAllowLive returns the old "allow_live" field's value of the Group entity.
-// If the Group object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *GroupMutation) OldAllowLive(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAllowLive is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAllowLive requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAllowLive: %w", err)
-	}
-	return oldValue.AllowLive, nil
-}
-
-// ResetAllowLive resets all changes to the "allow_live" field.
-func (m *GroupMutation) ResetAllowLive() {
-	m.allow_live = nil
-}
-
 // SetRequireOauthOnly sets the "require_oauth_only" field.
 func (m *GroupMutation) SetRequireOauthOnly(b bool) {
 	m.require_oauth_only = &b
@@ -24497,6 +24469,226 @@ func (m *GroupMutation) AddedRpmLimit() (r int, exists bool) {
 func (m *GroupMutation) ResetRpmLimit() {
 	m.rpm_limit = nil
 	m.addrpm_limit = nil
+}
+
+// SetKiroCacheEmulationEnabled sets the "kiro_cache_emulation_enabled" field.
+func (m *GroupMutation) SetKiroCacheEmulationEnabled(b bool) {
+	m.kiro_cache_emulation_enabled = &b
+}
+
+// KiroCacheEmulationEnabled returns the value of the "kiro_cache_emulation_enabled" field in the mutation.
+func (m *GroupMutation) KiroCacheEmulationEnabled() (r bool, exists bool) {
+	v := m.kiro_cache_emulation_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKiroCacheEmulationEnabled returns the old "kiro_cache_emulation_enabled" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldKiroCacheEmulationEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKiroCacheEmulationEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKiroCacheEmulationEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKiroCacheEmulationEnabled: %w", err)
+	}
+	return oldValue.KiroCacheEmulationEnabled, nil
+}
+
+// ResetKiroCacheEmulationEnabled resets all changes to the "kiro_cache_emulation_enabled" field.
+func (m *GroupMutation) ResetKiroCacheEmulationEnabled() {
+	m.kiro_cache_emulation_enabled = nil
+}
+
+// SetKiroAutoStickyEnabled sets the "kiro_auto_sticky_enabled" field.
+func (m *GroupMutation) SetKiroAutoStickyEnabled(b bool) {
+	m.kiro_auto_sticky_enabled = &b
+}
+
+// KiroAutoStickyEnabled returns the value of the "kiro_auto_sticky_enabled" field in the mutation.
+func (m *GroupMutation) KiroAutoStickyEnabled() (r bool, exists bool) {
+	v := m.kiro_auto_sticky_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKiroAutoStickyEnabled returns the old "kiro_auto_sticky_enabled" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldKiroAutoStickyEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKiroAutoStickyEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKiroAutoStickyEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKiroAutoStickyEnabled: %w", err)
+	}
+	return oldValue.KiroAutoStickyEnabled, nil
+}
+
+// ResetKiroAutoStickyEnabled resets all changes to the "kiro_auto_sticky_enabled" field.
+func (m *GroupMutation) ResetKiroAutoStickyEnabled() {
+	m.kiro_auto_sticky_enabled = nil
+}
+
+// SetKiroStickySessionTTLSeconds sets the "kiro_sticky_session_ttl_seconds" field.
+func (m *GroupMutation) SetKiroStickySessionTTLSeconds(i int) {
+	m.kiro_sticky_session_ttl_seconds = &i
+	m.addkiro_sticky_session_ttl_seconds = nil
+}
+
+// KiroStickySessionTTLSeconds returns the value of the "kiro_sticky_session_ttl_seconds" field in the mutation.
+func (m *GroupMutation) KiroStickySessionTTLSeconds() (r int, exists bool) {
+	v := m.kiro_sticky_session_ttl_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKiroStickySessionTTLSeconds returns the old "kiro_sticky_session_ttl_seconds" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldKiroStickySessionTTLSeconds(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKiroStickySessionTTLSeconds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKiroStickySessionTTLSeconds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKiroStickySessionTTLSeconds: %w", err)
+	}
+	return oldValue.KiroStickySessionTTLSeconds, nil
+}
+
+// AddKiroStickySessionTTLSeconds adds i to the "kiro_sticky_session_ttl_seconds" field.
+func (m *GroupMutation) AddKiroStickySessionTTLSeconds(i int) {
+	if m.addkiro_sticky_session_ttl_seconds != nil {
+		*m.addkiro_sticky_session_ttl_seconds += i
+	} else {
+		m.addkiro_sticky_session_ttl_seconds = &i
+	}
+}
+
+// AddedKiroStickySessionTTLSeconds returns the value that was added to the "kiro_sticky_session_ttl_seconds" field in this mutation.
+func (m *GroupMutation) AddedKiroStickySessionTTLSeconds() (r int, exists bool) {
+	v := m.addkiro_sticky_session_ttl_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetKiroStickySessionTTLSeconds resets all changes to the "kiro_sticky_session_ttl_seconds" field.
+func (m *GroupMutation) ResetKiroStickySessionTTLSeconds() {
+	m.kiro_sticky_session_ttl_seconds = nil
+	m.addkiro_sticky_session_ttl_seconds = nil
+}
+
+// SetKiroCacheEmulationRatio sets the "kiro_cache_emulation_ratio" field.
+func (m *GroupMutation) SetKiroCacheEmulationRatio(f float64) {
+	m.kiro_cache_emulation_ratio = &f
+	m.addkiro_cache_emulation_ratio = nil
+}
+
+// KiroCacheEmulationRatio returns the value of the "kiro_cache_emulation_ratio" field in the mutation.
+func (m *GroupMutation) KiroCacheEmulationRatio() (r float64, exists bool) {
+	v := m.kiro_cache_emulation_ratio
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKiroCacheEmulationRatio returns the old "kiro_cache_emulation_ratio" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldKiroCacheEmulationRatio(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKiroCacheEmulationRatio is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKiroCacheEmulationRatio requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKiroCacheEmulationRatio: %w", err)
+	}
+	return oldValue.KiroCacheEmulationRatio, nil
+}
+
+// AddKiroCacheEmulationRatio adds f to the "kiro_cache_emulation_ratio" field.
+func (m *GroupMutation) AddKiroCacheEmulationRatio(f float64) {
+	if m.addkiro_cache_emulation_ratio != nil {
+		*m.addkiro_cache_emulation_ratio += f
+	} else {
+		m.addkiro_cache_emulation_ratio = &f
+	}
+}
+
+// AddedKiroCacheEmulationRatio returns the value that was added to the "kiro_cache_emulation_ratio" field in this mutation.
+func (m *GroupMutation) AddedKiroCacheEmulationRatio() (r float64, exists bool) {
+	v := m.addkiro_cache_emulation_ratio
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetKiroCacheEmulationRatio resets all changes to the "kiro_cache_emulation_ratio" field.
+func (m *GroupMutation) ResetKiroCacheEmulationRatio() {
+	m.kiro_cache_emulation_ratio = nil
+	m.addkiro_cache_emulation_ratio = nil
+}
+
+// SetKiroEndpointMode sets the "kiro_endpoint_mode" field.
+func (m *GroupMutation) SetKiroEndpointMode(s string) {
+	m.kiro_endpoint_mode = &s
+}
+
+// KiroEndpointMode returns the value of the "kiro_endpoint_mode" field in the mutation.
+func (m *GroupMutation) KiroEndpointMode() (r string, exists bool) {
+	v := m.kiro_endpoint_mode
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKiroEndpointMode returns the old "kiro_endpoint_mode" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldKiroEndpointMode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKiroEndpointMode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKiroEndpointMode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKiroEndpointMode: %w", err)
+	}
+	return oldValue.KiroEndpointMode, nil
+}
+
+// ResetKiroEndpointMode resets all changes to the "kiro_endpoint_mode" field.
+func (m *GroupMutation) ResetKiroEndpointMode() {
+	m.kiro_endpoint_mode = nil
 }
 
 // SetMaxReasoningEffort sets the "max_reasoning_effort" field.
@@ -24944,7 +25136,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 52)
+	fields := make([]string, 0, 56)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -25074,9 +25266,6 @@ func (m *GroupMutation) Fields() []string {
 	if m.allow_messages_dispatch != nil {
 		fields = append(fields, group.FieldAllowMessagesDispatch)
 	}
-	if m.allow_live != nil {
-		fields = append(fields, group.FieldAllowLive)
-	}
 	if m.require_oauth_only != nil {
 		fields = append(fields, group.FieldRequireOauthOnly)
 	}
@@ -25094,6 +25283,21 @@ func (m *GroupMutation) Fields() []string {
 	}
 	if m.rpm_limit != nil {
 		fields = append(fields, group.FieldRpmLimit)
+	}
+	if m.kiro_cache_emulation_enabled != nil {
+		fields = append(fields, group.FieldKiroCacheEmulationEnabled)
+	}
+	if m.kiro_auto_sticky_enabled != nil {
+		fields = append(fields, group.FieldKiroAutoStickyEnabled)
+	}
+	if m.kiro_sticky_session_ttl_seconds != nil {
+		fields = append(fields, group.FieldKiroStickySessionTTLSeconds)
+	}
+	if m.kiro_cache_emulation_ratio != nil {
+		fields = append(fields, group.FieldKiroCacheEmulationRatio)
+	}
+	if m.kiro_endpoint_mode != nil {
+		fields = append(fields, group.FieldKiroEndpointMode)
 	}
 	if m.max_reasoning_effort != nil {
 		fields = append(fields, group.FieldMaxReasoningEffort)
@@ -25195,8 +25399,6 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.SortOrder()
 	case group.FieldAllowMessagesDispatch:
 		return m.AllowMessagesDispatch()
-	case group.FieldAllowLive:
-		return m.AllowLive()
 	case group.FieldRequireOauthOnly:
 		return m.RequireOauthOnly()
 	case group.FieldRequirePrivacySet:
@@ -25209,6 +25411,16 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.ModelsListConfig()
 	case group.FieldRpmLimit:
 		return m.RpmLimit()
+	case group.FieldKiroCacheEmulationEnabled:
+		return m.KiroCacheEmulationEnabled()
+	case group.FieldKiroAutoStickyEnabled:
+		return m.KiroAutoStickyEnabled()
+	case group.FieldKiroStickySessionTTLSeconds:
+		return m.KiroStickySessionTTLSeconds()
+	case group.FieldKiroCacheEmulationRatio:
+		return m.KiroCacheEmulationRatio()
+	case group.FieldKiroEndpointMode:
+		return m.KiroEndpointMode()
 	case group.FieldMaxReasoningEffort:
 		return m.MaxReasoningEffort()
 	case group.FieldReasoningEffortMappings:
@@ -25308,8 +25520,6 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldSortOrder(ctx)
 	case group.FieldAllowMessagesDispatch:
 		return m.OldAllowMessagesDispatch(ctx)
-	case group.FieldAllowLive:
-		return m.OldAllowLive(ctx)
 	case group.FieldRequireOauthOnly:
 		return m.OldRequireOauthOnly(ctx)
 	case group.FieldRequirePrivacySet:
@@ -25322,6 +25532,16 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldModelsListConfig(ctx)
 	case group.FieldRpmLimit:
 		return m.OldRpmLimit(ctx)
+	case group.FieldKiroCacheEmulationEnabled:
+		return m.OldKiroCacheEmulationEnabled(ctx)
+	case group.FieldKiroAutoStickyEnabled:
+		return m.OldKiroAutoStickyEnabled(ctx)
+	case group.FieldKiroStickySessionTTLSeconds:
+		return m.OldKiroStickySessionTTLSeconds(ctx)
+	case group.FieldKiroCacheEmulationRatio:
+		return m.OldKiroCacheEmulationRatio(ctx)
+	case group.FieldKiroEndpointMode:
+		return m.OldKiroEndpointMode(ctx)
 	case group.FieldMaxReasoningEffort:
 		return m.OldMaxReasoningEffort(ctx)
 	case group.FieldReasoningEffortMappings:
@@ -25636,13 +25856,6 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAllowMessagesDispatch(v)
 		return nil
-	case group.FieldAllowLive:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAllowLive(v)
-		return nil
 	case group.FieldRequireOauthOnly:
 		v, ok := value.(bool)
 		if !ok {
@@ -25684,6 +25897,41 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRpmLimit(v)
+		return nil
+	case group.FieldKiroCacheEmulationEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKiroCacheEmulationEnabled(v)
+		return nil
+	case group.FieldKiroAutoStickyEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKiroAutoStickyEnabled(v)
+		return nil
+	case group.FieldKiroStickySessionTTLSeconds:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKiroStickySessionTTLSeconds(v)
+		return nil
+	case group.FieldKiroCacheEmulationRatio:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKiroCacheEmulationRatio(v)
+		return nil
+	case group.FieldKiroEndpointMode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKiroEndpointMode(v)
 		return nil
 	case group.FieldMaxReasoningEffort:
 		v, ok := value.(string)
@@ -25770,6 +26018,12 @@ func (m *GroupMutation) AddedFields() []string {
 	if m.addrpm_limit != nil {
 		fields = append(fields, group.FieldRpmLimit)
 	}
+	if m.addkiro_sticky_session_ttl_seconds != nil {
+		fields = append(fields, group.FieldKiroStickySessionTTLSeconds)
+	}
+	if m.addkiro_cache_emulation_ratio != nil {
+		fields = append(fields, group.FieldKiroCacheEmulationRatio)
+	}
 	return fields
 }
 
@@ -25820,6 +26074,10 @@ func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedSortOrder()
 	case group.FieldRpmLimit:
 		return m.AddedRpmLimit()
+	case group.FieldKiroStickySessionTTLSeconds:
+		return m.AddedKiroStickySessionTTLSeconds()
+	case group.FieldKiroCacheEmulationRatio:
+		return m.AddedKiroCacheEmulationRatio()
 	}
 	return nil, false
 }
@@ -25975,6 +26233,20 @@ func (m *GroupMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddRpmLimit(v)
+		return nil
+	case group.FieldKiroStickySessionTTLSeconds:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddKiroStickySessionTTLSeconds(v)
+		return nil
+	case group.FieldKiroCacheEmulationRatio:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddKiroCacheEmulationRatio(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Group numeric field %s", name)
@@ -26231,9 +26503,6 @@ func (m *GroupMutation) ResetField(name string) error {
 	case group.FieldAllowMessagesDispatch:
 		m.ResetAllowMessagesDispatch()
 		return nil
-	case group.FieldAllowLive:
-		m.ResetAllowLive()
-		return nil
 	case group.FieldRequireOauthOnly:
 		m.ResetRequireOauthOnly()
 		return nil
@@ -26251,6 +26520,21 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldRpmLimit:
 		m.ResetRpmLimit()
+		return nil
+	case group.FieldKiroCacheEmulationEnabled:
+		m.ResetKiroCacheEmulationEnabled()
+		return nil
+	case group.FieldKiroAutoStickyEnabled:
+		m.ResetKiroAutoStickyEnabled()
+		return nil
+	case group.FieldKiroStickySessionTTLSeconds:
+		m.ResetKiroStickySessionTTLSeconds()
+		return nil
+	case group.FieldKiroCacheEmulationRatio:
+		m.ResetKiroCacheEmulationRatio()
+		return nil
+	case group.FieldKiroEndpointMode:
+		m.ResetKiroEndpointMode()
 		return nil
 	case group.FieldMaxReasoningEffort:
 		m.ResetMaxReasoningEffort()
@@ -26474,6 +26758,1167 @@ func (m *GroupMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Group edge %s", name)
+}
+
+// IPBanMutation represents an operation that mutates the IPBan nodes in the graph.
+type IPBanMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int64
+	created_at    *time.Time
+	updated_at    *time.Time
+	deleted_at    *time.Time
+	rule_type     *string
+	pattern       *string
+	ua_pattern    *string
+	status        *string
+	reason        *string
+	source        *string
+	created_by    *int64
+	addcreated_by *int64
+	expires_at    *time.Time
+	last_hit_at   *time.Time
+	hit_count     *int64
+	addhit_count  *int64
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*IPBan, error)
+	predicates    []predicate.IPBan
+}
+
+var _ ent.Mutation = (*IPBanMutation)(nil)
+
+// ipbanOption allows management of the mutation configuration using functional options.
+type ipbanOption func(*IPBanMutation)
+
+// newIPBanMutation creates new mutation for the IPBan entity.
+func newIPBanMutation(c config, op Op, opts ...ipbanOption) *IPBanMutation {
+	m := &IPBanMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeIPBan,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withIPBanID sets the ID field of the mutation.
+func withIPBanID(id int64) ipbanOption {
+	return func(m *IPBanMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *IPBan
+		)
+		m.oldValue = func(ctx context.Context) (*IPBan, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().IPBan.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withIPBan sets the old IPBan of the mutation.
+func withIPBan(node *IPBan) ipbanOption {
+	return func(m *IPBanMutation) {
+		m.oldValue = func(context.Context) (*IPBan, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m IPBanMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m IPBanMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *IPBanMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *IPBanMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().IPBan.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *IPBanMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *IPBanMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *IPBanMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *IPBanMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *IPBanMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *IPBanMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *IPBanMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *IPBanMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *IPBanMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[ipban.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *IPBanMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[ipban.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *IPBanMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, ipban.FieldDeletedAt)
+}
+
+// SetRuleType sets the "rule_type" field.
+func (m *IPBanMutation) SetRuleType(s string) {
+	m.rule_type = &s
+}
+
+// RuleType returns the value of the "rule_type" field in the mutation.
+func (m *IPBanMutation) RuleType() (r string, exists bool) {
+	v := m.rule_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRuleType returns the old "rule_type" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldRuleType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRuleType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRuleType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRuleType: %w", err)
+	}
+	return oldValue.RuleType, nil
+}
+
+// ResetRuleType resets all changes to the "rule_type" field.
+func (m *IPBanMutation) ResetRuleType() {
+	m.rule_type = nil
+}
+
+// SetPattern sets the "pattern" field.
+func (m *IPBanMutation) SetPattern(s string) {
+	m.pattern = &s
+}
+
+// Pattern returns the value of the "pattern" field in the mutation.
+func (m *IPBanMutation) Pattern() (r string, exists bool) {
+	v := m.pattern
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPattern returns the old "pattern" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldPattern(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPattern is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPattern requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPattern: %w", err)
+	}
+	return oldValue.Pattern, nil
+}
+
+// ResetPattern resets all changes to the "pattern" field.
+func (m *IPBanMutation) ResetPattern() {
+	m.pattern = nil
+}
+
+// SetUaPattern sets the "ua_pattern" field.
+func (m *IPBanMutation) SetUaPattern(s string) {
+	m.ua_pattern = &s
+}
+
+// UaPattern returns the value of the "ua_pattern" field in the mutation.
+func (m *IPBanMutation) UaPattern() (r string, exists bool) {
+	v := m.ua_pattern
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUaPattern returns the old "ua_pattern" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldUaPattern(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUaPattern is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUaPattern requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUaPattern: %w", err)
+	}
+	return oldValue.UaPattern, nil
+}
+
+// ClearUaPattern clears the value of the "ua_pattern" field.
+func (m *IPBanMutation) ClearUaPattern() {
+	m.ua_pattern = nil
+	m.clearedFields[ipban.FieldUaPattern] = struct{}{}
+}
+
+// UaPatternCleared returns if the "ua_pattern" field was cleared in this mutation.
+func (m *IPBanMutation) UaPatternCleared() bool {
+	_, ok := m.clearedFields[ipban.FieldUaPattern]
+	return ok
+}
+
+// ResetUaPattern resets all changes to the "ua_pattern" field.
+func (m *IPBanMutation) ResetUaPattern() {
+	m.ua_pattern = nil
+	delete(m.clearedFields, ipban.FieldUaPattern)
+}
+
+// SetStatus sets the "status" field.
+func (m *IPBanMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *IPBanMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *IPBanMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetReason sets the "reason" field.
+func (m *IPBanMutation) SetReason(s string) {
+	m.reason = &s
+}
+
+// Reason returns the value of the "reason" field in the mutation.
+func (m *IPBanMutation) Reason() (r string, exists bool) {
+	v := m.reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReason returns the old "reason" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldReason(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReason: %w", err)
+	}
+	return oldValue.Reason, nil
+}
+
+// ClearReason clears the value of the "reason" field.
+func (m *IPBanMutation) ClearReason() {
+	m.reason = nil
+	m.clearedFields[ipban.FieldReason] = struct{}{}
+}
+
+// ReasonCleared returns if the "reason" field was cleared in this mutation.
+func (m *IPBanMutation) ReasonCleared() bool {
+	_, ok := m.clearedFields[ipban.FieldReason]
+	return ok
+}
+
+// ResetReason resets all changes to the "reason" field.
+func (m *IPBanMutation) ResetReason() {
+	m.reason = nil
+	delete(m.clearedFields, ipban.FieldReason)
+}
+
+// SetSource sets the "source" field.
+func (m *IPBanMutation) SetSource(s string) {
+	m.source = &s
+}
+
+// Source returns the value of the "source" field in the mutation.
+func (m *IPBanMutation) Source() (r string, exists bool) {
+	v := m.source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSource returns the old "source" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldSource(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSource: %w", err)
+	}
+	return oldValue.Source, nil
+}
+
+// ResetSource resets all changes to the "source" field.
+func (m *IPBanMutation) ResetSource() {
+	m.source = nil
+}
+
+// SetCreatedBy sets the "created_by" field.
+func (m *IPBanMutation) SetCreatedBy(i int64) {
+	m.created_by = &i
+	m.addcreated_by = nil
+}
+
+// CreatedBy returns the value of the "created_by" field in the mutation.
+func (m *IPBanMutation) CreatedBy() (r int64, exists bool) {
+	v := m.created_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedBy returns the old "created_by" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldCreatedBy(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedBy: %w", err)
+	}
+	return oldValue.CreatedBy, nil
+}
+
+// AddCreatedBy adds i to the "created_by" field.
+func (m *IPBanMutation) AddCreatedBy(i int64) {
+	if m.addcreated_by != nil {
+		*m.addcreated_by += i
+	} else {
+		m.addcreated_by = &i
+	}
+}
+
+// AddedCreatedBy returns the value that was added to the "created_by" field in this mutation.
+func (m *IPBanMutation) AddedCreatedBy() (r int64, exists bool) {
+	v := m.addcreated_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCreatedBy clears the value of the "created_by" field.
+func (m *IPBanMutation) ClearCreatedBy() {
+	m.created_by = nil
+	m.addcreated_by = nil
+	m.clearedFields[ipban.FieldCreatedBy] = struct{}{}
+}
+
+// CreatedByCleared returns if the "created_by" field was cleared in this mutation.
+func (m *IPBanMutation) CreatedByCleared() bool {
+	_, ok := m.clearedFields[ipban.FieldCreatedBy]
+	return ok
+}
+
+// ResetCreatedBy resets all changes to the "created_by" field.
+func (m *IPBanMutation) ResetCreatedBy() {
+	m.created_by = nil
+	m.addcreated_by = nil
+	delete(m.clearedFields, ipban.FieldCreatedBy)
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *IPBanMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *IPBanMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldExpiresAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ClearExpiresAt clears the value of the "expires_at" field.
+func (m *IPBanMutation) ClearExpiresAt() {
+	m.expires_at = nil
+	m.clearedFields[ipban.FieldExpiresAt] = struct{}{}
+}
+
+// ExpiresAtCleared returns if the "expires_at" field was cleared in this mutation.
+func (m *IPBanMutation) ExpiresAtCleared() bool {
+	_, ok := m.clearedFields[ipban.FieldExpiresAt]
+	return ok
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *IPBanMutation) ResetExpiresAt() {
+	m.expires_at = nil
+	delete(m.clearedFields, ipban.FieldExpiresAt)
+}
+
+// SetLastHitAt sets the "last_hit_at" field.
+func (m *IPBanMutation) SetLastHitAt(t time.Time) {
+	m.last_hit_at = &t
+}
+
+// LastHitAt returns the value of the "last_hit_at" field in the mutation.
+func (m *IPBanMutation) LastHitAt() (r time.Time, exists bool) {
+	v := m.last_hit_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastHitAt returns the old "last_hit_at" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldLastHitAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastHitAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastHitAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastHitAt: %w", err)
+	}
+	return oldValue.LastHitAt, nil
+}
+
+// ClearLastHitAt clears the value of the "last_hit_at" field.
+func (m *IPBanMutation) ClearLastHitAt() {
+	m.last_hit_at = nil
+	m.clearedFields[ipban.FieldLastHitAt] = struct{}{}
+}
+
+// LastHitAtCleared returns if the "last_hit_at" field was cleared in this mutation.
+func (m *IPBanMutation) LastHitAtCleared() bool {
+	_, ok := m.clearedFields[ipban.FieldLastHitAt]
+	return ok
+}
+
+// ResetLastHitAt resets all changes to the "last_hit_at" field.
+func (m *IPBanMutation) ResetLastHitAt() {
+	m.last_hit_at = nil
+	delete(m.clearedFields, ipban.FieldLastHitAt)
+}
+
+// SetHitCount sets the "hit_count" field.
+func (m *IPBanMutation) SetHitCount(i int64) {
+	m.hit_count = &i
+	m.addhit_count = nil
+}
+
+// HitCount returns the value of the "hit_count" field in the mutation.
+func (m *IPBanMutation) HitCount() (r int64, exists bool) {
+	v := m.hit_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHitCount returns the old "hit_count" field's value of the IPBan entity.
+// If the IPBan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IPBanMutation) OldHitCount(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHitCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHitCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHitCount: %w", err)
+	}
+	return oldValue.HitCount, nil
+}
+
+// AddHitCount adds i to the "hit_count" field.
+func (m *IPBanMutation) AddHitCount(i int64) {
+	if m.addhit_count != nil {
+		*m.addhit_count += i
+	} else {
+		m.addhit_count = &i
+	}
+}
+
+// AddedHitCount returns the value that was added to the "hit_count" field in this mutation.
+func (m *IPBanMutation) AddedHitCount() (r int64, exists bool) {
+	v := m.addhit_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetHitCount resets all changes to the "hit_count" field.
+func (m *IPBanMutation) ResetHitCount() {
+	m.hit_count = nil
+	m.addhit_count = nil
+}
+
+// Where appends a list predicates to the IPBanMutation builder.
+func (m *IPBanMutation) Where(ps ...predicate.IPBan) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the IPBanMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *IPBanMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.IPBan, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *IPBanMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *IPBanMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (IPBan).
+func (m *IPBanMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *IPBanMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.created_at != nil {
+		fields = append(fields, ipban.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, ipban.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, ipban.FieldDeletedAt)
+	}
+	if m.rule_type != nil {
+		fields = append(fields, ipban.FieldRuleType)
+	}
+	if m.pattern != nil {
+		fields = append(fields, ipban.FieldPattern)
+	}
+	if m.ua_pattern != nil {
+		fields = append(fields, ipban.FieldUaPattern)
+	}
+	if m.status != nil {
+		fields = append(fields, ipban.FieldStatus)
+	}
+	if m.reason != nil {
+		fields = append(fields, ipban.FieldReason)
+	}
+	if m.source != nil {
+		fields = append(fields, ipban.FieldSource)
+	}
+	if m.created_by != nil {
+		fields = append(fields, ipban.FieldCreatedBy)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, ipban.FieldExpiresAt)
+	}
+	if m.last_hit_at != nil {
+		fields = append(fields, ipban.FieldLastHitAt)
+	}
+	if m.hit_count != nil {
+		fields = append(fields, ipban.FieldHitCount)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *IPBanMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case ipban.FieldCreatedAt:
+		return m.CreatedAt()
+	case ipban.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case ipban.FieldDeletedAt:
+		return m.DeletedAt()
+	case ipban.FieldRuleType:
+		return m.RuleType()
+	case ipban.FieldPattern:
+		return m.Pattern()
+	case ipban.FieldUaPattern:
+		return m.UaPattern()
+	case ipban.FieldStatus:
+		return m.Status()
+	case ipban.FieldReason:
+		return m.Reason()
+	case ipban.FieldSource:
+		return m.Source()
+	case ipban.FieldCreatedBy:
+		return m.CreatedBy()
+	case ipban.FieldExpiresAt:
+		return m.ExpiresAt()
+	case ipban.FieldLastHitAt:
+		return m.LastHitAt()
+	case ipban.FieldHitCount:
+		return m.HitCount()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *IPBanMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case ipban.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case ipban.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case ipban.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case ipban.FieldRuleType:
+		return m.OldRuleType(ctx)
+	case ipban.FieldPattern:
+		return m.OldPattern(ctx)
+	case ipban.FieldUaPattern:
+		return m.OldUaPattern(ctx)
+	case ipban.FieldStatus:
+		return m.OldStatus(ctx)
+	case ipban.FieldReason:
+		return m.OldReason(ctx)
+	case ipban.FieldSource:
+		return m.OldSource(ctx)
+	case ipban.FieldCreatedBy:
+		return m.OldCreatedBy(ctx)
+	case ipban.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
+	case ipban.FieldLastHitAt:
+		return m.OldLastHitAt(ctx)
+	case ipban.FieldHitCount:
+		return m.OldHitCount(ctx)
+	}
+	return nil, fmt.Errorf("unknown IPBan field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IPBanMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case ipban.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case ipban.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case ipban.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case ipban.FieldRuleType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRuleType(v)
+		return nil
+	case ipban.FieldPattern:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPattern(v)
+		return nil
+	case ipban.FieldUaPattern:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUaPattern(v)
+		return nil
+	case ipban.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case ipban.FieldReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReason(v)
+		return nil
+	case ipban.FieldSource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSource(v)
+		return nil
+	case ipban.FieldCreatedBy:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedBy(v)
+		return nil
+	case ipban.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
+		return nil
+	case ipban.FieldLastHitAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastHitAt(v)
+		return nil
+	case ipban.FieldHitCount:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHitCount(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IPBan field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *IPBanMutation) AddedFields() []string {
+	var fields []string
+	if m.addcreated_by != nil {
+		fields = append(fields, ipban.FieldCreatedBy)
+	}
+	if m.addhit_count != nil {
+		fields = append(fields, ipban.FieldHitCount)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *IPBanMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case ipban.FieldCreatedBy:
+		return m.AddedCreatedBy()
+	case ipban.FieldHitCount:
+		return m.AddedHitCount()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IPBanMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case ipban.FieldCreatedBy:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedBy(v)
+		return nil
+	case ipban.FieldHitCount:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddHitCount(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IPBan numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *IPBanMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(ipban.FieldDeletedAt) {
+		fields = append(fields, ipban.FieldDeletedAt)
+	}
+	if m.FieldCleared(ipban.FieldUaPattern) {
+		fields = append(fields, ipban.FieldUaPattern)
+	}
+	if m.FieldCleared(ipban.FieldReason) {
+		fields = append(fields, ipban.FieldReason)
+	}
+	if m.FieldCleared(ipban.FieldCreatedBy) {
+		fields = append(fields, ipban.FieldCreatedBy)
+	}
+	if m.FieldCleared(ipban.FieldExpiresAt) {
+		fields = append(fields, ipban.FieldExpiresAt)
+	}
+	if m.FieldCleared(ipban.FieldLastHitAt) {
+		fields = append(fields, ipban.FieldLastHitAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *IPBanMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *IPBanMutation) ClearField(name string) error {
+	switch name {
+	case ipban.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	case ipban.FieldUaPattern:
+		m.ClearUaPattern()
+		return nil
+	case ipban.FieldReason:
+		m.ClearReason()
+		return nil
+	case ipban.FieldCreatedBy:
+		m.ClearCreatedBy()
+		return nil
+	case ipban.FieldExpiresAt:
+		m.ClearExpiresAt()
+		return nil
+	case ipban.FieldLastHitAt:
+		m.ClearLastHitAt()
+		return nil
+	}
+	return fmt.Errorf("unknown IPBan nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *IPBanMutation) ResetField(name string) error {
+	switch name {
+	case ipban.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case ipban.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case ipban.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case ipban.FieldRuleType:
+		m.ResetRuleType()
+		return nil
+	case ipban.FieldPattern:
+		m.ResetPattern()
+		return nil
+	case ipban.FieldUaPattern:
+		m.ResetUaPattern()
+		return nil
+	case ipban.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case ipban.FieldReason:
+		m.ResetReason()
+		return nil
+	case ipban.FieldSource:
+		m.ResetSource()
+		return nil
+	case ipban.FieldCreatedBy:
+		m.ResetCreatedBy()
+		return nil
+	case ipban.FieldExpiresAt:
+		m.ResetExpiresAt()
+		return nil
+	case ipban.FieldLastHitAt:
+		m.ResetLastHitAt()
+		return nil
+	case ipban.FieldHitCount:
+		m.ResetHitCount()
+		return nil
+	}
+	return fmt.Errorf("unknown IPBan field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *IPBanMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *IPBanMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *IPBanMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *IPBanMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *IPBanMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *IPBanMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *IPBanMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown IPBan unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *IPBanMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown IPBan edge %s", name)
 }
 
 // IdempotencyRecordMutation represents an operation that mutates the IdempotencyRecord nodes in the graph.
@@ -53777,6 +55222,14 @@ type UserSubscriptionMutation struct {
 	addweekly_usage_usd     *float64
 	monthly_usage_usd       *float64
 	addmonthly_usage_usd    *float64
+	daily_usage_tokens      *int64
+	adddaily_usage_tokens   *int64
+	weekly_usage_tokens     *int64
+	addweekly_usage_tokens  *int64
+	monthly_usage_tokens    *int64
+	addmonthly_usage_tokens *int64
+	manual_reset_credits    *int
+	addmanual_reset_credits *int
 	assigned_at             *time.Time
 	notes                   *string
 	clearedFields           map[string]struct{}
@@ -54508,6 +55961,230 @@ func (m *UserSubscriptionMutation) ResetMonthlyUsageUsd() {
 	m.addmonthly_usage_usd = nil
 }
 
+// SetDailyUsageTokens sets the "daily_usage_tokens" field.
+func (m *UserSubscriptionMutation) SetDailyUsageTokens(i int64) {
+	m.daily_usage_tokens = &i
+	m.adddaily_usage_tokens = nil
+}
+
+// DailyUsageTokens returns the value of the "daily_usage_tokens" field in the mutation.
+func (m *UserSubscriptionMutation) DailyUsageTokens() (r int64, exists bool) {
+	v := m.daily_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDailyUsageTokens returns the old "daily_usage_tokens" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldDailyUsageTokens(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDailyUsageTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDailyUsageTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDailyUsageTokens: %w", err)
+	}
+	return oldValue.DailyUsageTokens, nil
+}
+
+// AddDailyUsageTokens adds i to the "daily_usage_tokens" field.
+func (m *UserSubscriptionMutation) AddDailyUsageTokens(i int64) {
+	if m.adddaily_usage_tokens != nil {
+		*m.adddaily_usage_tokens += i
+	} else {
+		m.adddaily_usage_tokens = &i
+	}
+}
+
+// AddedDailyUsageTokens returns the value that was added to the "daily_usage_tokens" field in this mutation.
+func (m *UserSubscriptionMutation) AddedDailyUsageTokens() (r int64, exists bool) {
+	v := m.adddaily_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDailyUsageTokens resets all changes to the "daily_usage_tokens" field.
+func (m *UserSubscriptionMutation) ResetDailyUsageTokens() {
+	m.daily_usage_tokens = nil
+	m.adddaily_usage_tokens = nil
+}
+
+// SetWeeklyUsageTokens sets the "weekly_usage_tokens" field.
+func (m *UserSubscriptionMutation) SetWeeklyUsageTokens(i int64) {
+	m.weekly_usage_tokens = &i
+	m.addweekly_usage_tokens = nil
+}
+
+// WeeklyUsageTokens returns the value of the "weekly_usage_tokens" field in the mutation.
+func (m *UserSubscriptionMutation) WeeklyUsageTokens() (r int64, exists bool) {
+	v := m.weekly_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeeklyUsageTokens returns the old "weekly_usage_tokens" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldWeeklyUsageTokens(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeeklyUsageTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeeklyUsageTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeeklyUsageTokens: %w", err)
+	}
+	return oldValue.WeeklyUsageTokens, nil
+}
+
+// AddWeeklyUsageTokens adds i to the "weekly_usage_tokens" field.
+func (m *UserSubscriptionMutation) AddWeeklyUsageTokens(i int64) {
+	if m.addweekly_usage_tokens != nil {
+		*m.addweekly_usage_tokens += i
+	} else {
+		m.addweekly_usage_tokens = &i
+	}
+}
+
+// AddedWeeklyUsageTokens returns the value that was added to the "weekly_usage_tokens" field in this mutation.
+func (m *UserSubscriptionMutation) AddedWeeklyUsageTokens() (r int64, exists bool) {
+	v := m.addweekly_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetWeeklyUsageTokens resets all changes to the "weekly_usage_tokens" field.
+func (m *UserSubscriptionMutation) ResetWeeklyUsageTokens() {
+	m.weekly_usage_tokens = nil
+	m.addweekly_usage_tokens = nil
+}
+
+// SetMonthlyUsageTokens sets the "monthly_usage_tokens" field.
+func (m *UserSubscriptionMutation) SetMonthlyUsageTokens(i int64) {
+	m.monthly_usage_tokens = &i
+	m.addmonthly_usage_tokens = nil
+}
+
+// MonthlyUsageTokens returns the value of the "monthly_usage_tokens" field in the mutation.
+func (m *UserSubscriptionMutation) MonthlyUsageTokens() (r int64, exists bool) {
+	v := m.monthly_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonthlyUsageTokens returns the old "monthly_usage_tokens" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldMonthlyUsageTokens(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonthlyUsageTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonthlyUsageTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonthlyUsageTokens: %w", err)
+	}
+	return oldValue.MonthlyUsageTokens, nil
+}
+
+// AddMonthlyUsageTokens adds i to the "monthly_usage_tokens" field.
+func (m *UserSubscriptionMutation) AddMonthlyUsageTokens(i int64) {
+	if m.addmonthly_usage_tokens != nil {
+		*m.addmonthly_usage_tokens += i
+	} else {
+		m.addmonthly_usage_tokens = &i
+	}
+}
+
+// AddedMonthlyUsageTokens returns the value that was added to the "monthly_usage_tokens" field in this mutation.
+func (m *UserSubscriptionMutation) AddedMonthlyUsageTokens() (r int64, exists bool) {
+	v := m.addmonthly_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMonthlyUsageTokens resets all changes to the "monthly_usage_tokens" field.
+func (m *UserSubscriptionMutation) ResetMonthlyUsageTokens() {
+	m.monthly_usage_tokens = nil
+	m.addmonthly_usage_tokens = nil
+}
+
+// SetManualResetCredits sets the "manual_reset_credits" field.
+func (m *UserSubscriptionMutation) SetManualResetCredits(i int) {
+	m.manual_reset_credits = &i
+	m.addmanual_reset_credits = nil
+}
+
+// ManualResetCredits returns the value of the "manual_reset_credits" field in the mutation.
+func (m *UserSubscriptionMutation) ManualResetCredits() (r int, exists bool) {
+	v := m.manual_reset_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManualResetCredits returns the old "manual_reset_credits" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldManualResetCredits(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManualResetCredits is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManualResetCredits requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManualResetCredits: %w", err)
+	}
+	return oldValue.ManualResetCredits, nil
+}
+
+// AddManualResetCredits adds i to the "manual_reset_credits" field.
+func (m *UserSubscriptionMutation) AddManualResetCredits(i int) {
+	if m.addmanual_reset_credits != nil {
+		*m.addmanual_reset_credits += i
+	} else {
+		m.addmanual_reset_credits = &i
+	}
+}
+
+// AddedManualResetCredits returns the value that was added to the "manual_reset_credits" field in this mutation.
+func (m *UserSubscriptionMutation) AddedManualResetCredits() (r int, exists bool) {
+	v := m.addmanual_reset_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetManualResetCredits resets all changes to the "manual_reset_credits" field.
+func (m *UserSubscriptionMutation) ResetManualResetCredits() {
+	m.manual_reset_credits = nil
+	m.addmanual_reset_credits = nil
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (m *UserSubscriptionMutation) SetAssignedBy(i int64) {
 	m.assigned_by_user = &i
@@ -54824,7 +56501,7 @@ func (m *UserSubscriptionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserSubscriptionMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, usersubscription.FieldCreatedAt)
 	}
@@ -54866,6 +56543,18 @@ func (m *UserSubscriptionMutation) Fields() []string {
 	}
 	if m.monthly_usage_usd != nil {
 		fields = append(fields, usersubscription.FieldMonthlyUsageUsd)
+	}
+	if m.daily_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldDailyUsageTokens)
+	}
+	if m.weekly_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldWeeklyUsageTokens)
+	}
+	if m.monthly_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldMonthlyUsageTokens)
+	}
+	if m.manual_reset_credits != nil {
+		fields = append(fields, usersubscription.FieldManualResetCredits)
 	}
 	if m.assigned_by_user != nil {
 		fields = append(fields, usersubscription.FieldAssignedBy)
@@ -54912,6 +56601,14 @@ func (m *UserSubscriptionMutation) Field(name string) (ent.Value, bool) {
 		return m.WeeklyUsageUsd()
 	case usersubscription.FieldMonthlyUsageUsd:
 		return m.MonthlyUsageUsd()
+	case usersubscription.FieldDailyUsageTokens:
+		return m.DailyUsageTokens()
+	case usersubscription.FieldWeeklyUsageTokens:
+		return m.WeeklyUsageTokens()
+	case usersubscription.FieldMonthlyUsageTokens:
+		return m.MonthlyUsageTokens()
+	case usersubscription.FieldManualResetCredits:
+		return m.ManualResetCredits()
 	case usersubscription.FieldAssignedBy:
 		return m.AssignedBy()
 	case usersubscription.FieldAssignedAt:
@@ -54955,6 +56652,14 @@ func (m *UserSubscriptionMutation) OldField(ctx context.Context, name string) (e
 		return m.OldWeeklyUsageUsd(ctx)
 	case usersubscription.FieldMonthlyUsageUsd:
 		return m.OldMonthlyUsageUsd(ctx)
+	case usersubscription.FieldDailyUsageTokens:
+		return m.OldDailyUsageTokens(ctx)
+	case usersubscription.FieldWeeklyUsageTokens:
+		return m.OldWeeklyUsageTokens(ctx)
+	case usersubscription.FieldMonthlyUsageTokens:
+		return m.OldMonthlyUsageTokens(ctx)
+	case usersubscription.FieldManualResetCredits:
+		return m.OldManualResetCredits(ctx)
 	case usersubscription.FieldAssignedBy:
 		return m.OldAssignedBy(ctx)
 	case usersubscription.FieldAssignedAt:
@@ -55068,6 +56773,34 @@ func (m *UserSubscriptionMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetMonthlyUsageUsd(v)
 		return nil
+	case usersubscription.FieldDailyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDailyUsageTokens(v)
+		return nil
+	case usersubscription.FieldWeeklyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeeklyUsageTokens(v)
+		return nil
+	case usersubscription.FieldMonthlyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonthlyUsageTokens(v)
+		return nil
+	case usersubscription.FieldManualResetCredits:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManualResetCredits(v)
+		return nil
 	case usersubscription.FieldAssignedBy:
 		v, ok := value.(int64)
 		if !ok {
@@ -55106,6 +56839,18 @@ func (m *UserSubscriptionMutation) AddedFields() []string {
 	if m.addmonthly_usage_usd != nil {
 		fields = append(fields, usersubscription.FieldMonthlyUsageUsd)
 	}
+	if m.adddaily_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldDailyUsageTokens)
+	}
+	if m.addweekly_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldWeeklyUsageTokens)
+	}
+	if m.addmonthly_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldMonthlyUsageTokens)
+	}
+	if m.addmanual_reset_credits != nil {
+		fields = append(fields, usersubscription.FieldManualResetCredits)
+	}
 	return fields
 }
 
@@ -55120,6 +56865,14 @@ func (m *UserSubscriptionMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedWeeklyUsageUsd()
 	case usersubscription.FieldMonthlyUsageUsd:
 		return m.AddedMonthlyUsageUsd()
+	case usersubscription.FieldDailyUsageTokens:
+		return m.AddedDailyUsageTokens()
+	case usersubscription.FieldWeeklyUsageTokens:
+		return m.AddedWeeklyUsageTokens()
+	case usersubscription.FieldMonthlyUsageTokens:
+		return m.AddedMonthlyUsageTokens()
+	case usersubscription.FieldManualResetCredits:
+		return m.AddedManualResetCredits()
 	}
 	return nil, false
 }
@@ -55149,6 +56902,34 @@ func (m *UserSubscriptionMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddMonthlyUsageUsd(v)
+		return nil
+	case usersubscription.FieldDailyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDailyUsageTokens(v)
+		return nil
+	case usersubscription.FieldWeeklyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWeeklyUsageTokens(v)
+		return nil
+	case usersubscription.FieldMonthlyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMonthlyUsageTokens(v)
+		return nil
+	case usersubscription.FieldManualResetCredits:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddManualResetCredits(v)
 		return nil
 	}
 	return fmt.Errorf("unknown UserSubscription numeric field %s", name)
@@ -55257,6 +57038,18 @@ func (m *UserSubscriptionMutation) ResetField(name string) error {
 		return nil
 	case usersubscription.FieldMonthlyUsageUsd:
 		m.ResetMonthlyUsageUsd()
+		return nil
+	case usersubscription.FieldDailyUsageTokens:
+		m.ResetDailyUsageTokens()
+		return nil
+	case usersubscription.FieldWeeklyUsageTokens:
+		m.ResetWeeklyUsageTokens()
+		return nil
+	case usersubscription.FieldMonthlyUsageTokens:
+		m.ResetMonthlyUsageTokens()
+		return nil
+	case usersubscription.FieldManualResetCredits:
+		m.ResetManualResetCredits()
 		return nil
 	case usersubscription.FieldAssignedBy:
 		m.ResetAssignedBy()

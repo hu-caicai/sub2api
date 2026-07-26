@@ -51,6 +51,13 @@ const PaginationStub = defineComponent({
   template: '<div class="pagination-stub" />',
 })
 
+const ConfirmDialogStub = defineComponent({
+  name: 'ConfirmDialogStub',
+  props: { show: Boolean },
+  emits: ['confirm'],
+  template: '<button v-if="show" class="confirm-dialog-confirm" @click="$emit(\'confirm\')">confirm</button>',
+})
+
 const runtimeConfig = {
   level: 'info',
   enable_sampling: false,
@@ -100,6 +107,7 @@ describe('OpsSystemLogTable host support', () => {
         stubs: {
           Select: SelectStub,
           Pagination: PaginationStub,
+          ConfirmDialog: ConfirmDialogStub,
         },
       },
     })
@@ -121,6 +129,7 @@ describe('OpsSystemLogTable host support', () => {
     const cleanupButton = wrapper.findAll('button').find((button) => button.text() === 'admin.ops.systemLogs.cleanCurrentFilters')
     expect(cleanupButton).toBeDefined()
     await cleanupButton!.trigger('click')
+    await wrapper.find('.confirm-dialog-confirm').trigger('click')
     await flushPromises()
 
     expect(mockCleanupSystemLogs).toHaveBeenCalledWith(expect.objectContaining({ host: 'api-node-2' }))

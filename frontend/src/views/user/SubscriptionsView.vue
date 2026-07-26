@@ -29,38 +29,32 @@
           v-for="subscription in subscriptions"
           :key="subscription.id"
           class="overflow-hidden rounded-2xl border bg-white dark:bg-dark-800"
-          :class="platformBorderClass(subscription.group?.platform || '')"
+          :class="platformBorderClass(userFacingPlatform(subscription.group?.platform || ''))"
         >
           <!-- Header -->
           <div
-            class="flex items-center justify-between border-b border-gray-100 p-4 dark:border-dark-700"
+            class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-dark-700"
           >
-            <div class="flex items-center gap-3">
-              <div :class="['h-1.5 w-1.5 shrink-0 rounded-full', platformAccentDotClass(subscription.group?.platform || '')]" />
-              <div>
-                <div class="flex items-center gap-2">
-                  <h3 class="font-semibold text-gray-900 dark:text-white">
-                    {{ subscription.group?.name || `Group #${subscription.group_id}` }}
+            <div class="flex min-w-0 flex-1 items-center gap-3">
+              <div :class="['h-1.5 w-1.5 shrink-0 rounded-full', platformAccentDotClass(userFacingPlatform(subscription.group?.platform || ''))]" />
+              <div class="min-w-0">
+                <div class="flex min-w-0 items-center gap-2">
+                  <h3 class="truncate font-semibold text-gray-900 dark:text-white">
+                    {{ subscription.group?.name ? userFacingPlatformText(subscription.group.name) : `Group #${subscription.group_id}` }}
                   </h3>
-                  <span :class="['rounded-md border px-2 py-0.5 text-[11px] font-medium', platformBadgeClass(subscription.group?.platform || '')]">
+                  <span :class="['shrink-0 whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium', platformBadgeClass(userFacingPlatform(subscription.group?.platform || ''))]">
                     {{ platformLabel(subscription.group?.platform || '') }}
                   </span>
                 </div>
-                <p v-if="subscription.group?.description" class="mt-0.5 text-xs text-gray-500 dark:text-dark-400">
-                  {{ subscription.group.description }}
+                <p v-if="subscription.group?.description" class="mt-0.5 break-words text-xs leading-relaxed text-gray-500 dark:text-dark-400">
+                  {{ userFacingPlatformText(subscription.group.description) }}
                 </p>
-                <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400 dark:text-gray-500">
-                  <span>{{ t('payment.planCard.rate') }}: ×{{ subscription.group?.rate_multiplier ?? 1 }}</span>
-                  <span v-if="subscriptionHasPeakRate(subscription)" class="text-amber-700 dark:text-amber-300">
-                    {{ t('payment.planCard.peakRate') }}: {{ subscriptionPeakRateLabel(subscription) }}
-                  </span>
-                </div>
               </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex shrink-0 items-center gap-2">
               <span
                 :class="[
-                  'rounded-full px-2 py-0.5 text-xs font-medium',
+                  'whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium',
                   subscription.status === 'active'
                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
                     : subscription.status === 'expired'
@@ -72,7 +66,7 @@
               </span>
               <button
                 v-if="subscription.status === 'active'"
-                :class="['rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors', platformButtonClass(subscription.group?.platform || '')]"
+                :class="['whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors', platformButtonClass(userFacingPlatform(subscription.group?.platform || ''))]"
                 @click="router.push({ path: '/purchase', query: { tab: 'subscription', group: String(subscription.group_id) } })"
               >
                 {{ t('payment.renewNow') }}
@@ -112,6 +106,13 @@
                   }}
                 </span>
               </div>
+              <p class="text-xs tabular-nums text-gray-500 dark:text-dark-400">
+                {{
+                  t('userSubscriptions.tokenConsumed', {
+                    tokens: formatTokenCount(subscription.daily_usage_tokens)
+                  })
+                }}
+              </p>
               <div class="relative h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600">
                 <div
                   class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
@@ -135,6 +136,51 @@
               >
                 {{ formatDailyUsageWindow(subscription) }}
               </p>
+              <p
+                v-if="isOneTimeDailyQuota(subscription)"
+                class="text-xs text-gray-500 dark:text-dark-400"
+              >
+                {{ t('userSubscriptions.oneTimeDailyHint') }}
+              </p>
+            </div>
+
+            <!-- Manual daily reset (credits granted on active repurchase) -->
+            <div
+              v-if="subscription.group?.daily_limit_usd"
+              class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2.5 dark:border-emerald-800/60 dark:bg-emerald-950/30"
+            >
+              <div class="min-w-0 space-y-0.5 text-xs leading-relaxed">
+                <p class="font-medium text-emerald-800 dark:text-emerald-200">
+                  {{
+                    t('userSubscriptions.manualReset.remaining', {
+                      count: subscription.manual_reset_credits || 0
+                    })
+                  }}
+                </p>
+                <p
+                  v-if="manualResetHint(subscription)"
+                  class="text-emerald-700/80 dark:text-emerald-300/80"
+                >
+                  {{ manualResetHint(subscription) }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                :class="
+                  canManualReset(subscription)
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400'
+                    : 'bg-gray-200 text-gray-500 dark:bg-dark-600 dark:text-dark-300'
+                "
+                :disabled="!canManualReset(subscription) || resettingId === subscription.id"
+                @click="handleResetDaily(subscription)"
+              >
+                {{
+                  resettingId === subscription.id
+                    ? '...'
+                    : t('userSubscriptions.manualReset.button')
+                }}
+              </button>
             </div>
 
             <!-- Weekly Usage -->
@@ -149,6 +195,13 @@
                   }}
                 </span>
               </div>
+              <p class="text-xs tabular-nums text-gray-500 dark:text-dark-400">
+                {{
+                  t('userSubscriptions.tokenConsumed', {
+                    tokens: formatTokenCount(subscription.weekly_usage_tokens)
+                  })
+                }}
+              </p>
               <div class="relative h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600">
                 <div
                   class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
@@ -190,6 +243,13 @@
                   }}
                 </span>
               </div>
+              <p class="text-xs tabular-nums text-gray-500 dark:text-dark-400">
+                {{
+                  t('userSubscriptions.tokenConsumed', {
+                    tokens: formatTokenCount(subscription.monthly_usage_tokens)
+                  })
+                }}
+              </p>
               <div class="relative h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600">
                 <div
                   class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
@@ -237,6 +297,17 @@
                   <p class="text-xs text-emerald-600/70 dark:text-emerald-400/70">
                     {{ t('userSubscriptions.unlimitedDesc') }}
                   </p>
+                  <p class="mt-1 text-xs tabular-nums text-emerald-600/70 dark:text-emerald-400/70">
+                    {{
+                      t('userSubscriptions.tokenConsumed', {
+                        tokens: formatTokenCount(
+                          subscription.monthly_usage_tokens ||
+                            subscription.weekly_usage_tokens ||
+                            subscription.daily_usage_tokens
+                        )
+                      })
+                    }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -257,8 +328,14 @@ import type { UserSubscription } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { formatDateTimeToMinute } from '@/utils/format'
-import { hasPeakRate, formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
-import { platformBorderClass, platformBadgeClass, platformButtonClass, platformLabel } from '@/utils/platformColors'
+import {
+  platformBorderClass,
+  platformBadgeClass,
+  platformButtonClass,
+  platformLabel,
+  userFacingPlatform,
+  userFacingPlatformText,
+} from '@/utils/platformColors'
 import { getRemainingDurationParts, isOneTimeDailyQuota, type RemainingDurationParts } from '@/utils/subscriptionQuota'
 
 function platformAccentDotClass(p: string): string {
@@ -277,14 +354,7 @@ const appStore = useAppStore()
 
 const subscriptions = ref<UserSubscription[]>([])
 const loading = ref(true)
-
-function subscriptionHasPeakRate(subscription: UserSubscription): boolean {
-  return hasPeakRate(subscription.group)
-}
-
-function subscriptionPeakRateLabel(subscription: UserSubscription): string {
-  return formatPeakRateWindow(subscription.group, serverTimezoneLabel(appStore.cachedPublicSettings?.server_utc_offset))
-}
+const resettingId = ref<number | null>(null)
 
 async function loadSubscriptions() {
   try {
@@ -295,6 +365,65 @@ async function loadSubscriptions() {
     appStore.showError(t('userSubscriptions.failedToLoad'))
   } finally {
     loading.value = false
+  }
+}
+
+function isSubscriptionExpired(subscription: UserSubscription): boolean {
+  if (subscription.status === 'expired') return true
+  if (!subscription.expires_at) return false
+  return new Date(subscription.expires_at).getTime() <= Date.now()
+}
+
+function canManualReset(subscription: UserSubscription): boolean {
+  const credits = subscription.manual_reset_credits || 0
+  if (credits <= 0) return false
+  // 日卡：有付费待激活次数时，即使展示已过期也可点重置起算新 24h
+  if (isOneTimeDailyQuota(subscription)) return true
+  return subscription.status === 'active' && !isSubscriptionExpired(subscription)
+}
+
+function manualResetHint(subscription: UserSubscription): string {
+  const credits = subscription.manual_reset_credits || 0
+  if (credits > 0 && isOneTimeDailyQuota(subscription)) {
+    return t('userSubscriptions.manualReset.pendingActivate')
+  }
+  if (credits <= 0) {
+    if (isSubscriptionExpired(subscription) || subscription.status === 'expired') {
+      return t('userSubscriptions.manualReset.expiredNoCredits')
+    }
+    if (subscription.status === 'revoked') {
+      return t('userSubscriptions.manualReset.revoked')
+    }
+    return t('userSubscriptions.manualReset.noCredits')
+  }
+  if (subscription.status === 'revoked') {
+    return t('userSubscriptions.manualReset.revoked')
+  }
+  if (isSubscriptionExpired(subscription)) {
+    return t('userSubscriptions.manualReset.expired')
+  }
+  return ''
+}
+
+async function handleResetDaily(subscription: UserSubscription) {
+  if (!canManualReset(subscription) || resettingId.value != null) return
+  if (!window.confirm(t('userSubscriptions.manualReset.confirm'))) return
+
+  resettingId.value = subscription.id
+  try {
+    const updated = await subscriptionsAPI.resetDailyQuota(subscription.id)
+    const idx = subscriptions.value.findIndex((s) => s.id === subscription.id)
+    if (idx >= 0) {
+      subscriptions.value[idx] = { ...subscriptions.value[idx], ...updated }
+    }
+    appStore.showSuccess(t('userSubscriptions.manualReset.success'))
+  } catch (error) {
+    console.error('Failed to reset daily quota:', error)
+    // Refresh from server so button/credits cannot drift after a rejected attempt
+    await loadSubscriptions()
+    appStore.showError(t('userSubscriptions.manualReset.failed'))
+  } finally {
+    resettingId.value = null
   }
 }
 
@@ -360,14 +489,21 @@ function formatDurationParts(parts: RemainingDurationParts): string {
 
 function formatDailyUsageWindow(subscription: UserSubscription): string {
   if (isOneTimeDailyQuota(subscription) && subscription.expires_at) {
+    if (isSubscriptionExpired(subscription)) {
+      return t('userSubscriptions.quotaEnded')
+    }
     const parts = getRemainingDurationParts(subscription.expires_at)
-    if (!parts) return t('userSubscriptions.windowNotActive')
+    if (!parts) return t('userSubscriptions.quotaEnded')
     return t('userSubscriptions.quotaEndsIn', { time: formatDurationParts(parts) })
   }
 
   return t('userSubscriptions.resetIn', {
     time: formatResetTime(subscription.daily_window_start, 24)
   })
+}
+
+function formatTokenCount(tokens?: number | null): string {
+  return (tokens || 0).toLocaleString()
 }
 
 function formatResetTime(windowStart: string | null, windowHours: number): string {

@@ -21,6 +21,13 @@ type UserSubscription struct {
 	WeeklyUsageUSD  float64
 	MonthlyUsageUSD float64
 
+	DailyUsageTokens   int64
+	WeeklyUsageTokens  int64
+	MonthlyUsageTokens int64
+
+	// ManualResetCredits is granted on active repurchase and consumed by user daily reset.
+	ManualResetCredits int
+
 	AssignedBy *int64
 	AssignedAt time.Time
 	Notes      string

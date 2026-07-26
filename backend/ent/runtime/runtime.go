@@ -24,6 +24,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
+	"github.com/Wei-Shaw/sub2api/ent/ipban"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
@@ -1141,46 +1142,131 @@ func init() {
 	groupDescAllowMessagesDispatch := groupFields[39].Descriptor()
 	// group.DefaultAllowMessagesDispatch holds the default value on creation for the allow_messages_dispatch field.
 	group.DefaultAllowMessagesDispatch = groupDescAllowMessagesDispatch.Default.(bool)
-	// groupDescAllowLive is the schema descriptor for allow_live field.
-	groupDescAllowLive := groupFields[40].Descriptor()
-	// group.DefaultAllowLive holds the default value on creation for the allow_live field.
-	group.DefaultAllowLive = groupDescAllowLive.Default.(bool)
 	// groupDescRequireOauthOnly is the schema descriptor for require_oauth_only field.
-	groupDescRequireOauthOnly := groupFields[41].Descriptor()
+	groupDescRequireOauthOnly := groupFields[40].Descriptor()
 	// group.DefaultRequireOauthOnly holds the default value on creation for the require_oauth_only field.
 	group.DefaultRequireOauthOnly = groupDescRequireOauthOnly.Default.(bool)
 	// groupDescRequirePrivacySet is the schema descriptor for require_privacy_set field.
-	groupDescRequirePrivacySet := groupFields[42].Descriptor()
+	groupDescRequirePrivacySet := groupFields[41].Descriptor()
 	// group.DefaultRequirePrivacySet holds the default value on creation for the require_privacy_set field.
 	group.DefaultRequirePrivacySet = groupDescRequirePrivacySet.Default.(bool)
 	// groupDescDefaultMappedModel is the schema descriptor for default_mapped_model field.
-	groupDescDefaultMappedModel := groupFields[43].Descriptor()
+	groupDescDefaultMappedModel := groupFields[42].Descriptor()
 	// group.DefaultDefaultMappedModel holds the default value on creation for the default_mapped_model field.
 	group.DefaultDefaultMappedModel = groupDescDefaultMappedModel.Default.(string)
 	// group.DefaultMappedModelValidator is a validator for the "default_mapped_model" field. It is called by the builders before save.
 	group.DefaultMappedModelValidator = groupDescDefaultMappedModel.Validators[0].(func(string) error)
 	// groupDescMessagesDispatchModelConfig is the schema descriptor for messages_dispatch_model_config field.
-	groupDescMessagesDispatchModelConfig := groupFields[44].Descriptor()
+	groupDescMessagesDispatchModelConfig := groupFields[43].Descriptor()
 	// group.DefaultMessagesDispatchModelConfig holds the default value on creation for the messages_dispatch_model_config field.
 	group.DefaultMessagesDispatchModelConfig = groupDescMessagesDispatchModelConfig.Default.(domain.OpenAIMessagesDispatchModelConfig)
 	// groupDescModelsListConfig is the schema descriptor for models_list_config field.
-	groupDescModelsListConfig := groupFields[45].Descriptor()
+	groupDescModelsListConfig := groupFields[44].Descriptor()
 	// group.DefaultModelsListConfig holds the default value on creation for the models_list_config field.
 	group.DefaultModelsListConfig = groupDescModelsListConfig.Default.(domain.GroupModelsListConfig)
 	// groupDescRpmLimit is the schema descriptor for rpm_limit field.
-	groupDescRpmLimit := groupFields[46].Descriptor()
+	groupDescRpmLimit := groupFields[45].Descriptor()
 	// group.DefaultRpmLimit holds the default value on creation for the rpm_limit field.
 	group.DefaultRpmLimit = groupDescRpmLimit.Default.(int)
+	// groupDescKiroCacheEmulationEnabled is the schema descriptor for kiro_cache_emulation_enabled field.
+	groupDescKiroCacheEmulationEnabled := groupFields[46].Descriptor()
+	// group.DefaultKiroCacheEmulationEnabled holds the default value on creation for the kiro_cache_emulation_enabled field.
+	group.DefaultKiroCacheEmulationEnabled = groupDescKiroCacheEmulationEnabled.Default.(bool)
+	// groupDescKiroAutoStickyEnabled is the schema descriptor for kiro_auto_sticky_enabled field.
+	groupDescKiroAutoStickyEnabled := groupFields[47].Descriptor()
+	// group.DefaultKiroAutoStickyEnabled holds the default value on creation for the kiro_auto_sticky_enabled field.
+	group.DefaultKiroAutoStickyEnabled = groupDescKiroAutoStickyEnabled.Default.(bool)
+	// groupDescKiroStickySessionTTLSeconds is the schema descriptor for kiro_sticky_session_ttl_seconds field.
+	groupDescKiroStickySessionTTLSeconds := groupFields[48].Descriptor()
+	// group.DefaultKiroStickySessionTTLSeconds holds the default value on creation for the kiro_sticky_session_ttl_seconds field.
+	group.DefaultKiroStickySessionTTLSeconds = groupDescKiroStickySessionTTLSeconds.Default.(int)
+	// groupDescKiroCacheEmulationRatio is the schema descriptor for kiro_cache_emulation_ratio field.
+	groupDescKiroCacheEmulationRatio := groupFields[49].Descriptor()
+	// group.DefaultKiroCacheEmulationRatio holds the default value on creation for the kiro_cache_emulation_ratio field.
+	group.DefaultKiroCacheEmulationRatio = groupDescKiroCacheEmulationRatio.Default.(float64)
+	// groupDescKiroEndpointMode is the schema descriptor for kiro_endpoint_mode field.
+	groupDescKiroEndpointMode := groupFields[50].Descriptor()
+	// group.DefaultKiroEndpointMode holds the default value on creation for the kiro_endpoint_mode field.
+	group.DefaultKiroEndpointMode = groupDescKiroEndpointMode.Default.(string)
+	// group.KiroEndpointModeValidator is a validator for the "kiro_endpoint_mode" field. It is called by the builders before save.
+	group.KiroEndpointModeValidator = groupDescKiroEndpointMode.Validators[0].(func(string) error)
 	// groupDescMaxReasoningEffort is the schema descriptor for max_reasoning_effort field.
-	groupDescMaxReasoningEffort := groupFields[47].Descriptor()
+	groupDescMaxReasoningEffort := groupFields[51].Descriptor()
 	// group.DefaultMaxReasoningEffort holds the default value on creation for the max_reasoning_effort field.
 	group.DefaultMaxReasoningEffort = groupDescMaxReasoningEffort.Default.(string)
 	// group.MaxReasoningEffortValidator is a validator for the "max_reasoning_effort" field. It is called by the builders before save.
 	group.MaxReasoningEffortValidator = groupDescMaxReasoningEffort.Validators[0].(func(string) error)
 	// groupDescReasoningEffortMappings is the schema descriptor for reasoning_effort_mappings field.
-	groupDescReasoningEffortMappings := groupFields[48].Descriptor()
+	groupDescReasoningEffortMappings := groupFields[52].Descriptor()
 	// group.DefaultReasoningEffortMappings holds the default value on creation for the reasoning_effort_mappings field.
 	group.DefaultReasoningEffortMappings = groupDescReasoningEffortMappings.Default.([]domain.ReasoningEffortMapping)
+	ipbanMixin := schema.IPBan{}.Mixin()
+	ipbanMixinHooks1 := ipbanMixin[1].Hooks()
+	ipban.Hooks[0] = ipbanMixinHooks1[0]
+	ipbanMixinInters1 := ipbanMixin[1].Interceptors()
+	ipban.Interceptors[0] = ipbanMixinInters1[0]
+	ipbanMixinFields0 := ipbanMixin[0].Fields()
+	_ = ipbanMixinFields0
+	ipbanFields := schema.IPBan{}.Fields()
+	_ = ipbanFields
+	// ipbanDescCreatedAt is the schema descriptor for created_at field.
+	ipbanDescCreatedAt := ipbanMixinFields0[0].Descriptor()
+	// ipban.DefaultCreatedAt holds the default value on creation for the created_at field.
+	ipban.DefaultCreatedAt = ipbanDescCreatedAt.Default.(func() time.Time)
+	// ipbanDescUpdatedAt is the schema descriptor for updated_at field.
+	ipbanDescUpdatedAt := ipbanMixinFields0[1].Descriptor()
+	// ipban.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	ipban.DefaultUpdatedAt = ipbanDescUpdatedAt.Default.(func() time.Time)
+	// ipban.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	ipban.UpdateDefaultUpdatedAt = ipbanDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// ipbanDescRuleType is the schema descriptor for rule_type field.
+	ipbanDescRuleType := ipbanFields[0].Descriptor()
+	// ipban.DefaultRuleType holds the default value on creation for the rule_type field.
+	ipban.DefaultRuleType = ipbanDescRuleType.Default.(string)
+	// ipban.RuleTypeValidator is a validator for the "rule_type" field. It is called by the builders before save.
+	ipban.RuleTypeValidator = ipbanDescRuleType.Validators[0].(func(string) error)
+	// ipbanDescPattern is the schema descriptor for pattern field.
+	ipbanDescPattern := ipbanFields[1].Descriptor()
+	// ipban.PatternValidator is a validator for the "pattern" field. It is called by the builders before save.
+	ipban.PatternValidator = func() func(string) error {
+		validators := ipbanDescPattern.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(pattern string) error {
+			for _, fn := range fns {
+				if err := fn(pattern); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// ipbanDescUaPattern is the schema descriptor for ua_pattern field.
+	ipbanDescUaPattern := ipbanFields[2].Descriptor()
+	// ipban.UaPatternValidator is a validator for the "ua_pattern" field. It is called by the builders before save.
+	ipban.UaPatternValidator = ipbanDescUaPattern.Validators[0].(func(string) error)
+	// ipbanDescStatus is the schema descriptor for status field.
+	ipbanDescStatus := ipbanFields[3].Descriptor()
+	// ipban.DefaultStatus holds the default value on creation for the status field.
+	ipban.DefaultStatus = ipbanDescStatus.Default.(string)
+	// ipban.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	ipban.StatusValidator = ipbanDescStatus.Validators[0].(func(string) error)
+	// ipbanDescReason is the schema descriptor for reason field.
+	ipbanDescReason := ipbanFields[4].Descriptor()
+	// ipban.ReasonValidator is a validator for the "reason" field. It is called by the builders before save.
+	ipban.ReasonValidator = ipbanDescReason.Validators[0].(func(string) error)
+	// ipbanDescSource is the schema descriptor for source field.
+	ipbanDescSource := ipbanFields[5].Descriptor()
+	// ipban.DefaultSource holds the default value on creation for the source field.
+	ipban.DefaultSource = ipbanDescSource.Default.(string)
+	// ipban.SourceValidator is a validator for the "source" field. It is called by the builders before save.
+	ipban.SourceValidator = ipbanDescSource.Validators[0].(func(string) error)
+	// ipbanDescHitCount is the schema descriptor for hit_count field.
+	ipbanDescHitCount := ipbanFields[9].Descriptor()
+	// ipban.DefaultHitCount holds the default value on creation for the hit_count field.
+	ipban.DefaultHitCount = ipbanDescHitCount.Default.(int64)
 	idempotencyrecordMixin := schema.IdempotencyRecord{}.Mixin()
 	idempotencyrecordMixinFields0 := idempotencyrecordMixin[0].Fields()
 	_ = idempotencyrecordMixinFields0
@@ -2424,8 +2510,26 @@ func init() {
 	usersubscriptionDescMonthlyUsageUsd := usersubscriptionFields[10].Descriptor()
 	// usersubscription.DefaultMonthlyUsageUsd holds the default value on creation for the monthly_usage_usd field.
 	usersubscription.DefaultMonthlyUsageUsd = usersubscriptionDescMonthlyUsageUsd.Default.(float64)
+	// usersubscriptionDescDailyUsageTokens is the schema descriptor for daily_usage_tokens field.
+	usersubscriptionDescDailyUsageTokens := usersubscriptionFields[11].Descriptor()
+	// usersubscription.DefaultDailyUsageTokens holds the default value on creation for the daily_usage_tokens field.
+	usersubscription.DefaultDailyUsageTokens = usersubscriptionDescDailyUsageTokens.Default.(int64)
+	// usersubscriptionDescWeeklyUsageTokens is the schema descriptor for weekly_usage_tokens field.
+	usersubscriptionDescWeeklyUsageTokens := usersubscriptionFields[12].Descriptor()
+	// usersubscription.DefaultWeeklyUsageTokens holds the default value on creation for the weekly_usage_tokens field.
+	usersubscription.DefaultWeeklyUsageTokens = usersubscriptionDescWeeklyUsageTokens.Default.(int64)
+	// usersubscriptionDescMonthlyUsageTokens is the schema descriptor for monthly_usage_tokens field.
+	usersubscriptionDescMonthlyUsageTokens := usersubscriptionFields[13].Descriptor()
+	// usersubscription.DefaultMonthlyUsageTokens holds the default value on creation for the monthly_usage_tokens field.
+	usersubscription.DefaultMonthlyUsageTokens = usersubscriptionDescMonthlyUsageTokens.Default.(int64)
+	// usersubscriptionDescManualResetCredits is the schema descriptor for manual_reset_credits field.
+	usersubscriptionDescManualResetCredits := usersubscriptionFields[14].Descriptor()
+	// usersubscription.DefaultManualResetCredits holds the default value on creation for the manual_reset_credits field.
+	usersubscription.DefaultManualResetCredits = usersubscriptionDescManualResetCredits.Default.(int)
+	// usersubscription.ManualResetCreditsValidator is a validator for the "manual_reset_credits" field. It is called by the builders before save.
+	usersubscription.ManualResetCreditsValidator = usersubscriptionDescManualResetCredits.Validators[0].(func(int) error)
 	// usersubscriptionDescAssignedAt is the schema descriptor for assigned_at field.
-	usersubscriptionDescAssignedAt := usersubscriptionFields[12].Descriptor()
+	usersubscriptionDescAssignedAt := usersubscriptionFields[16].Descriptor()
 	// usersubscription.DefaultAssignedAt holds the default value on creation for the assigned_at field.
 	usersubscription.DefaultAssignedAt = usersubscriptionDescAssignedAt.Default.(func() time.Time)
 }

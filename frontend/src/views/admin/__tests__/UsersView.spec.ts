@@ -119,6 +119,36 @@ const BulkEditUserModalStub = {
   `
 }
 
+const mountUsersView = () => mount(UsersView, {
+  global: {
+    stubs: {
+      AppLayout: { template: '<div><slot /></div>' },
+      TablePageLayout: {
+        template: '<div><slot name="filters" /><slot name="table" /><slot name="pagination" /></div>'
+      },
+      DataTable: DataTableStub,
+      Pagination: true,
+      ConfirmDialog: true,
+      EmptyState: true,
+      GroupBadge: true,
+      Select: true,
+      UserAttributesConfigModal: true,
+      UserConcurrencyCell: true,
+      UserCreateModal: true,
+      UserEditModal: true,
+      BulkEditUserModal: BulkEditUserModalStub,
+      UserPlatformQuotaModal: true,
+      UserApiKeysModal: true,
+      UserAllowedGroupsModal: true,
+      UserBalanceModal: true,
+      UserBalanceHistoryModal: true,
+      GroupReplaceModal: true,
+      Icon: true,
+      Teleport: true
+    }
+  }
+})
+
 describe('admin UsersView', () => {
   beforeEach(() => {
     vi.useRealTimers()
@@ -148,35 +178,7 @@ describe('admin UsersView', () => {
   })
 
   it('shows active, used, and created activity columns in order and requests last_used_at sort', async () => {
-    const wrapper = mount(UsersView, {
-      global: {
-        stubs: {
-          AppLayout: { template: '<div><slot /></div>' },
-          TablePageLayout: {
-            template: '<div><slot name="filters" /><slot name="table" /><slot name="pagination" /></div>'
-          },
-          DataTable: DataTableStub,
-          Pagination: true,
-          ConfirmDialog: true,
-          EmptyState: true,
-          GroupBadge: true,
-          Select: true,
-          UserAttributesConfigModal: true,
-          UserConcurrencyCell: true,
-          UserCreateModal: true,
-          UserEditModal: true,
-          BulkEditUserModal: BulkEditUserModalStub,
-          UserPlatformQuotaModal: true,
-          UserApiKeysModal: true,
-          UserAllowedGroupsModal: true,
-          UserBalanceModal: true,
-          UserBalanceHistoryModal: true,
-          GroupReplaceModal: true,
-          Icon: true,
-          Teleport: true
-        }
-      }
-    })
+    const wrapper = mountUsersView()
 
     await flushPromises()
 
@@ -197,6 +199,18 @@ describe('admin UsersView', () => {
       }),
       expect.any(Object)
     )
+  })
+
+  it('lists Kiro usage in column settings while keeping it hidden by default', async () => {
+    const wrapper = mountUsersView()
+
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="columns"]').text().split(',')).not.toContain('usage_kiro')
+
+    await wrapper.get('button[title="admin.users.columnSettings"]').trigger('click')
+
+    expect(wrapper.text()).toContain('admin.users.columns.usageKiro')
   })
 
   it('clears usage current-page sort when switching to last_used_at server sort', async () => {

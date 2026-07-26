@@ -1749,6 +1749,14 @@ func (r *stubUserSubscriptionRepo) UpdateNotes(ctx context.Context, subscription
 	return errors.New("not implemented")
 }
 
+func (r *stubUserSubscriptionRepo) AddManualResetCredits(ctx context.Context, subscriptionID int64, delta int) error {
+	return errors.New("not implemented")
+}
+
+func (r *stubUserSubscriptionRepo) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error {
+	return errors.New("not implemented")
+}
+
 func (r *stubUserSubscriptionRepo) ActivateWindows(ctx context.Context, id int64, start time.Time) error {
 	if r.activateWindow != nil {
 		return r.activateWindow(ctx, id, start)
@@ -1781,7 +1789,7 @@ func (r *stubUserSubscriptionRepo) ResetMonthlyUsage(ctx context.Context, id int
 	return errors.New("not implemented")
 }
 
-func (r *stubUserSubscriptionRepo) IncrementUsage(ctx context.Context, id int64, costUSD float64) error {
+func (r *stubUserSubscriptionRepo) IncrementUsage(ctx context.Context, id int64, costUSD float64, tokens int64) error {
 	return errors.New("not implemented")
 }
 

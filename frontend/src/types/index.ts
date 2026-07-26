@@ -492,7 +492,7 @@ export interface PaginationConfig {
 
 // ==================== API Key & Group Types ====================
 
-export type GroupPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok' | 'composite'
+export type GroupPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok' | 'kiro' | 'composite'
 
 export type SubscriptionType = 'standard' | 'subscription'
 
@@ -551,12 +551,15 @@ export interface Group {
   fallback_group_id_on_invalid_request: number | null
   // OpenAI Messages 调度开关（用户侧需要此字段判断是否展示 Claude Code 教程）
   allow_messages_dispatch?: boolean
-  // OpenAI Live 接口开关
-  allow_live: boolean
   default_mapped_model?: string
   messages_dispatch_model_config?: OpenAIMessagesDispatchModelConfig
   require_oauth_only: boolean
   require_privacy_set: boolean
+  kiro_auto_sticky_enabled: boolean
+  kiro_sticky_session_ttl_seconds: number
+  kiro_cache_emulation_enabled: boolean
+  kiro_cache_emulation_ratio: number
+  kiro_endpoint_mode?: string
   created_at: string
   updated_at: string
 }
@@ -744,7 +747,6 @@ export interface CreateGroupRequest {
   supported_model_scopes?: string[]
   models_list_config?: ModelsListConfig
   allow_messages_dispatch?: boolean
-  allow_live?: boolean
   default_mapped_model?: string
   messages_dispatch_model_config?: OpenAIMessagesDispatchModelConfig
   model_routing?: Record<string, number[]> | null
@@ -754,6 +756,11 @@ export interface CreateGroupRequest {
   reasoning_effort_mappings?: ReasoningEffortMapping[]
   require_oauth_only?: boolean
   require_privacy_set?: boolean
+  kiro_auto_sticky_enabled?: boolean
+  kiro_sticky_session_ttl_seconds?: number
+  kiro_cache_emulation_enabled?: boolean
+  kiro_cache_emulation_ratio?: number
+  kiro_endpoint_mode?: string
   // 从指定分组复制账号
   copy_accounts_from_group_ids?: number[]
 }
@@ -795,7 +802,6 @@ export interface UpdateGroupRequest {
   supported_model_scopes?: string[]
   models_list_config?: ModelsListConfig
   allow_messages_dispatch?: boolean
-  allow_live?: boolean
   default_mapped_model?: string
   messages_dispatch_model_config?: OpenAIMessagesDispatchModelConfig
   model_routing?: Record<string, number[]> | null
@@ -805,12 +811,17 @@ export interface UpdateGroupRequest {
   reasoning_effort_mappings?: ReasoningEffortMapping[]
   require_oauth_only?: boolean
   require_privacy_set?: boolean
+  kiro_auto_sticky_enabled?: boolean
+  kiro_sticky_session_ttl_seconds?: number
+  kiro_cache_emulation_enabled?: boolean
+  kiro_cache_emulation_ratio?: number
+  kiro_endpoint_mode?: string
   copy_accounts_from_group_ids?: number[]
 }
 
 // ==================== Account & Proxy Types ====================
 
-export type AccountPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok'
+export type AccountPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok' | 'kiro'
 export type AccountType = 'oauth' | 'setup-token' | 'apikey' | 'upstream' | 'bedrock' | 'service_account'
 export type OAuthAddMethod = 'oauth' | 'setup-token'
 export type ProxyProtocol = 'http' | 'https' | 'socks5' | 'socks5h'
@@ -1023,10 +1034,7 @@ export interface OllamaCloudUsageState {
 
 export interface OllamaCloudUsageSettings {
   enabled: boolean
-  /** Max wait while model requests keep arriving (minutes). */
   interval_minutes: number
-  /** Trailing quiet period after the latest model request (minutes). */
-  debounce_minutes: number
 }
 
 export interface Account {
@@ -1046,6 +1054,7 @@ export interface Account {
   extra?: (CodexUsageSnapshot & OpenAICompactState & {
     model_rate_limits?: Record<string, { rate_limited_at: string; rate_limit_reset_at: string }>
     antigravity_credits_overages?: Record<string, { activated_at: string; active_until: string }>
+    kiro_credit_unit_price_usd?: number
     upstream_billing_probe_enabled?: boolean
     upstream_billing_probe?: UpstreamBillingProbeSnapshot
   } & Record<string, unknown>)
@@ -1082,6 +1091,12 @@ export interface Account {
   overload_until: string | null
   temp_unschedulable_until: string | null
   temp_unschedulable_reason: string | null
+  kiro_quota_state?: string | null
+  kiro_quota_reason?: string | null
+  kiro_quota_reset_at?: string | null
+  kiro_runtime_state?: string | null
+  kiro_runtime_reason?: string | null
+  kiro_runtime_reset_at?: string | null
 
   // Session window fields (5-hour window)
   session_window_start: string | null
@@ -1169,6 +1184,7 @@ export interface WindowStats {
   cost: number // Account cost (account multiplier)
   standard_cost?: number
   user_cost?: number
+  kiro_credits?: number
 }
 
 export interface UsageProgress {
@@ -1221,6 +1237,21 @@ export interface GrokBillingSummary {
   failed_windows?: string[]
 }
 
+export interface KiroCreditProgress {
+  current_usage: number
+  usage_limit: number
+  percentage_used: number
+  days_remaining?: number
+  expiry_date?: string | null
+}
+
+export interface KiroOverageInfo {
+  current_overages: number
+  overage_charges: number
+  currency_code?: string
+  currency_symbol?: string
+}
+
 export interface AccountUsageInfo {
   source?: 'passive' | 'active'
   updated_at: string | null
@@ -1256,6 +1287,19 @@ export interface AccountUsageInfo {
     amount?: number
     minimum_balance?: number
   }> | null
+  kiro_subscription_name?: string | null
+  kiro_subscription_type?: string | null
+  kiro_reset_at?: string | null
+  kiro_overages_enabled?: boolean
+  kiro_credit?: KiroCreditProgress | null
+  kiro_bonus?: KiroCreditProgress | null
+  kiro_overage?: KiroOverageInfo | null
+  kiro_quota_state?: string | null
+  kiro_quota_reason?: string | null
+  kiro_quota_reset_at?: string | null
+  kiro_runtime_state?: string | null
+  kiro_runtime_reason?: string | null
+  kiro_runtime_reset_at?: string | null
   // Antigravity 403 forbidden 状态
   is_forbidden?: boolean
   forbidden_reason?: string
@@ -1518,7 +1562,7 @@ export interface CodexSessionImportResult {
 // ==================== Usage & Redeem Types ====================
 
 export type RedeemCodeType = 'balance' | 'concurrency' | 'subscription' | 'invitation'
-export type UsageRequestType = 'unknown' | 'sync' | 'stream' | 'ws_v2' | 'cyber' | 'live'
+export type UsageRequestType = 'unknown' | 'sync' | 'stream' | 'ws_v2' | 'cyber'
 export type ImageSizeSource = 'output' | 'input' | 'default' | 'legacy'
 export type ImageSizeBreakdown = Record<string, number>
 
@@ -1883,6 +1927,10 @@ export interface UserSubscription {
   daily_usage_usd: number
   weekly_usage_usd: number
   monthly_usage_usd: number
+  daily_usage_tokens?: number
+  weekly_usage_tokens?: number
+  monthly_usage_tokens?: number
+  manual_reset_credits?: number
   daily_window_start: string | null
   weekly_window_start: string | null
   monthly_window_start: string | null
@@ -2162,6 +2210,45 @@ export interface UpdatePromoCodeRequest {
   status?: 'active' | 'disabled'
   expires_at?: number | null
   notes?: string
+}
+
+// ==================== IP Ban Types ====================
+
+export type IPBanStatus = 'active' | 'inactive'
+export type AccessBanRuleType = 'ip' | 'ua' | 'ip_ua' | 'email_suffix' | 'email_regex'
+
+export interface IPBan {
+  id: number
+  rule_type: AccessBanRuleType
+  pattern: string
+  ua_pattern?: string | null
+  status: IPBanStatus
+  reason?: string | null
+  source: string
+  created_by?: number | null
+  expires_at?: string | null
+  last_hit_at?: string | null
+  hit_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateIPBanRequest {
+  rule_type?: AccessBanRuleType
+  pattern: string
+  ua_pattern?: string
+  reason?: string
+  source?: string
+  expires_at?: number | null
+}
+
+export interface UpdateIPBanRequest {
+  rule_type?: AccessBanRuleType
+  pattern?: string
+  ua_pattern?: string
+  reason?: string
+  status?: IPBanStatus
+  expires_at?: number | null
 }
 
 // ==================== TOTP (2FA) Types ====================

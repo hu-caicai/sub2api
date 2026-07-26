@@ -132,6 +132,29 @@ describe('PaymentStatusPanel', () => {
     openSpy.mockRestore()
   })
 
+  it('returns from QR mode without cancelling the order', async () => {
+    const wrapper = mount(PaymentStatusPanel, {
+      props: {
+        orderId: 42,
+        qrCode: 'https://pay.example.com/qr/42',
+        expiresAt: '2099-01-01T12:30:00Z',
+        paymentType: 'alipay',
+        orderType: 'balance',
+      },
+      global: {
+        stubs: {
+          Icon: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('button.btn.btn-secondary.w-full').trigger('click')
+
+    expect(cancelOrder).not.toHaveBeenCalled()
+    expect(wrapper.emitted('done')).toHaveLength(1)
+  })
+
   it('uses generic QR copy for custom methods that contain built-in names', async () => {
     const wrapper = mount(PaymentStatusPanel, {
       props: {

@@ -164,6 +164,22 @@ export async function deleteUser(id: number): Promise<{ message: string }> {
 }
 
 /**
+ * Batch delete users
+ * @param ids - User IDs to delete
+ * @returns Deleted IDs and skipped entries (e.g. admin users)
+ */
+export async function batchDelete(ids: number[]): Promise<{
+  deleted_ids: number[]
+  skipped: Array<{ id: number; reason: string }>
+}> {
+  const { data } = await apiClient.post<{
+    deleted_ids: number[]
+    skipped: Array<{ id: number; reason: string }>
+  }>('/admin/users/batch-delete', { ids })
+  return data
+}
+
+/**
  * Update user balance
  * @param id - User ID
  * @param balance - New balance
@@ -330,7 +346,7 @@ export async function bindUserAuthIdentity(
 /**
  * Platform quota types
  */
-export type PlatformQuotaPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok'
+export type PlatformQuotaPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok' | 'kiro'
 export type PlatformQuotaWindow = 'daily' | 'weekly' | 'monthly'
 
 export interface PlatformQuotaItem {
@@ -405,6 +421,7 @@ export const usersAPI = {
   create,
   update,
   delete: deleteUser,
+  batchDelete,
   updateBalance,
   updateConcurrency,
   batchUpdateLimits,

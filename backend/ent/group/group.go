@@ -102,8 +102,6 @@ const (
 	FieldSortOrder = "sort_order"
 	// FieldAllowMessagesDispatch holds the string denoting the allow_messages_dispatch field in the database.
 	FieldAllowMessagesDispatch = "allow_messages_dispatch"
-	// FieldAllowLive holds the string denoting the allow_live field in the database.
-	FieldAllowLive = "allow_live"
 	// FieldRequireOauthOnly holds the string denoting the require_oauth_only field in the database.
 	FieldRequireOauthOnly = "require_oauth_only"
 	// FieldRequirePrivacySet holds the string denoting the require_privacy_set field in the database.
@@ -116,6 +114,16 @@ const (
 	FieldModelsListConfig = "models_list_config"
 	// FieldRpmLimit holds the string denoting the rpm_limit field in the database.
 	FieldRpmLimit = "rpm_limit"
+	// FieldKiroCacheEmulationEnabled holds the string denoting the kiro_cache_emulation_enabled field in the database.
+	FieldKiroCacheEmulationEnabled = "kiro_cache_emulation_enabled"
+	// FieldKiroAutoStickyEnabled holds the string denoting the kiro_auto_sticky_enabled field in the database.
+	FieldKiroAutoStickyEnabled = "kiro_auto_sticky_enabled"
+	// FieldKiroStickySessionTTLSeconds holds the string denoting the kiro_sticky_session_ttl_seconds field in the database.
+	FieldKiroStickySessionTTLSeconds = "kiro_sticky_session_ttl_seconds"
+	// FieldKiroCacheEmulationRatio holds the string denoting the kiro_cache_emulation_ratio field in the database.
+	FieldKiroCacheEmulationRatio = "kiro_cache_emulation_ratio"
+	// FieldKiroEndpointMode holds the string denoting the kiro_endpoint_mode field in the database.
+	FieldKiroEndpointMode = "kiro_endpoint_mode"
 	// FieldMaxReasoningEffort holds the string denoting the max_reasoning_effort field in the database.
 	FieldMaxReasoningEffort = "max_reasoning_effort"
 	// FieldReasoningEffortMappings holds the string denoting the reasoning_effort_mappings field in the database.
@@ -238,13 +246,17 @@ var Columns = []string{
 	FieldSupportedModelScopes,
 	FieldSortOrder,
 	FieldAllowMessagesDispatch,
-	FieldAllowLive,
 	FieldRequireOauthOnly,
 	FieldRequirePrivacySet,
 	FieldDefaultMappedModel,
 	FieldMessagesDispatchModelConfig,
 	FieldModelsListConfig,
 	FieldRpmLimit,
+	FieldKiroCacheEmulationEnabled,
+	FieldKiroAutoStickyEnabled,
+	FieldKiroStickySessionTTLSeconds,
+	FieldKiroCacheEmulationRatio,
+	FieldKiroEndpointMode,
 	FieldMaxReasoningEffort,
 	FieldReasoningEffortMappings,
 }
@@ -344,8 +356,6 @@ var (
 	DefaultSortOrder int
 	// DefaultAllowMessagesDispatch holds the default value on creation for the "allow_messages_dispatch" field.
 	DefaultAllowMessagesDispatch bool
-	// DefaultAllowLive holds the default value on creation for the "allow_live" field.
-	DefaultAllowLive bool
 	// DefaultRequireOauthOnly holds the default value on creation for the "require_oauth_only" field.
 	DefaultRequireOauthOnly bool
 	// DefaultRequirePrivacySet holds the default value on creation for the "require_privacy_set" field.
@@ -360,6 +370,18 @@ var (
 	DefaultModelsListConfig domain.GroupModelsListConfig
 	// DefaultRpmLimit holds the default value on creation for the "rpm_limit" field.
 	DefaultRpmLimit int
+	// DefaultKiroCacheEmulationEnabled holds the default value on creation for the "kiro_cache_emulation_enabled" field.
+	DefaultKiroCacheEmulationEnabled bool
+	// DefaultKiroAutoStickyEnabled holds the default value on creation for the "kiro_auto_sticky_enabled" field.
+	DefaultKiroAutoStickyEnabled bool
+	// DefaultKiroStickySessionTTLSeconds holds the default value on creation for the "kiro_sticky_session_ttl_seconds" field.
+	DefaultKiroStickySessionTTLSeconds int
+	// DefaultKiroCacheEmulationRatio holds the default value on creation for the "kiro_cache_emulation_ratio" field.
+	DefaultKiroCacheEmulationRatio float64
+	// DefaultKiroEndpointMode holds the default value on creation for the "kiro_endpoint_mode" field.
+	DefaultKiroEndpointMode string
+	// KiroEndpointModeValidator is a validator for the "kiro_endpoint_mode" field. It is called by the builders before save.
+	KiroEndpointModeValidator func(string) error
 	// DefaultMaxReasoningEffort holds the default value on creation for the "max_reasoning_effort" field.
 	DefaultMaxReasoningEffort string
 	// MaxReasoningEffortValidator is a validator for the "max_reasoning_effort" field. It is called by the builders before save.
@@ -581,11 +603,6 @@ func ByAllowMessagesDispatch(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAllowMessagesDispatch, opts...).ToFunc()
 }
 
-// ByAllowLive orders the results by the allow_live field.
-func ByAllowLive(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAllowLive, opts...).ToFunc()
-}
-
 // ByRequireOauthOnly orders the results by the require_oauth_only field.
 func ByRequireOauthOnly(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRequireOauthOnly, opts...).ToFunc()
@@ -604,6 +621,31 @@ func ByDefaultMappedModel(opts ...sql.OrderTermOption) OrderOption {
 // ByRpmLimit orders the results by the rpm_limit field.
 func ByRpmLimit(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRpmLimit, opts...).ToFunc()
+}
+
+// ByKiroCacheEmulationEnabled orders the results by the kiro_cache_emulation_enabled field.
+func ByKiroCacheEmulationEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKiroCacheEmulationEnabled, opts...).ToFunc()
+}
+
+// ByKiroAutoStickyEnabled orders the results by the kiro_auto_sticky_enabled field.
+func ByKiroAutoStickyEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKiroAutoStickyEnabled, opts...).ToFunc()
+}
+
+// ByKiroStickySessionTTLSeconds orders the results by the kiro_sticky_session_ttl_seconds field.
+func ByKiroStickySessionTTLSeconds(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKiroStickySessionTTLSeconds, opts...).ToFunc()
+}
+
+// ByKiroCacheEmulationRatio orders the results by the kiro_cache_emulation_ratio field.
+func ByKiroCacheEmulationRatio(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKiroCacheEmulationRatio, opts...).ToFunc()
+}
+
+// ByKiroEndpointMode orders the results by the kiro_endpoint_mode field.
+func ByKiroEndpointMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKiroEndpointMode, opts...).ToFunc()
 }
 
 // ByMaxReasoningEffort orders the results by the max_reasoning_effort field.

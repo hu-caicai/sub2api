@@ -433,7 +433,6 @@ export default {
       timeImmediate: 'Immediate',
       timeNever: 'Never',
       readStatus: 'Read Status',
-      preview: 'Preview',
       eligible: 'Eligible',
       readAt: 'Read at',
       unread: 'Unread',
@@ -585,6 +584,9 @@ export default {
         missingRange: 'Please select a date range',
         submitSuccess: 'Cleanup task created',
         submitFailed: 'Failed to create cleanup task',
+        errorConfirm: 'Clear error request logs in the current filter range? This action cannot be undone.',
+        errorSubmitSuccess: 'Cleared {count} error request logs',
+        errorSubmitFailed: 'Failed to clear error request logs',
         loadFailed: 'Failed to load cleanup tasks',
         status: {
           pending: 'Pending',
